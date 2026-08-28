@@ -140,6 +140,34 @@ export class Chain {
         s.profiles[from] = { name, updated: blockMeta ? blockMeta.time : Date.now() };
         break;
       }
+      case 'TOKEN_TRANSFER': {
+        const tk = s.tokens[String(p.token || '').toUpperCase()];
+        if (!tk) throw new ChainError('no_token', 'unknown token');
+        const amt = r2(Number(p.amount));
+        if (!(amt > 0)) throw new ChainError('bad_amount', 'amount must be positive');
+        if (!p.to || typeof p.to !== 'string') throw new ChainError('bad_to', 'missing recipient');
+        if ((sender.tokens[tk.id] || 0) < amt) throw new ChainError('insufficient', 'insufficient token balance');
+        const to = Chain.ensureAccount(s, p.to);
+        sender.tokens[tk.id] = r2(sender.tokens[tk.id] - amt);
+        if (sender.tokens[tk.id] <= 0) delete sender.tokens[tk.id];
+        to.tokens[tk.id] = r2((to.tokens[tk.id] || 0) + amt);
+        tk.holders[from] = r2((tk.holders[from] || 0) - amt);
+        if (tk.holders[from] <= 0) delete tk.holders[from];
+        tk.holders[p.to] = r2((tk.holders[p.to] || 0) + amt);
+        break;
+      }
+      case 'COMMENT': {
+        const tk = s.tokens[String(p.token || '').toUpperCase()];
+        if (!tk) throw new ChainError('no_token', 'unknown token');
+        const text = String(p.text || '').trim();
+        if (!text || text.length > 200) throw new ChainError('bad_text', 'comment must be 1-200 chars');
+        if (sender.grid < 1) throw new ChainError('insufficient', 'comment fee is 1 GRID');
+        sender.grid = r4(sender.grid - 1); // burned anti-spam fee
+        if (!Array.isArray(tk.comments)) tk.comments = [];
+        tk.comments.push({ from, text, time: blockMeta ? blockMeta.time : Date.now() });
+        if (tk.comments.length > 200) tk.comments.splice(0, tk.comments.length - 200);
+        break;
+      }
       case 'BUY': {
         const t = s.tokens[String(p.token || '').toUpperCase()];
         if (!t) throw new ChainError('no_token', 'unknown token');
@@ -156,7 +184,7 @@ export class Chain {
         t.trades++;
         t.volume = r4(t.volume + dx);
         if (!t.graduated && t.x - V_GRID >= GRADUATION_TARGET) t.graduated = true;
-        this._pushHistory(t, blockMeta);
+        this._pushHistory(t, blockMeta, dx);
         break;
       }
       case 'SELL': {
@@ -177,7 +205,7 @@ export class Chain {
         sender.grid = r4(sender.grid + out);
         t.trades++;
         t.volume = r4(t.volume + out);
-        this._pushHistory(t, blockMeta);
+        this._pushHistory(t, blockMeta, out);
         break;
       }
       default:
@@ -197,8 +225,12 @@ export class Chain {
     if (this.recentTxs.length > 200) this.recentTxs.length = 200;
   }
 
-  _pushHistory(t, blockMeta) {
-    t.history.push({ t: blockMeta ? blockMeta.time : Date.now(), p: tokenPrice(t) });
+  _pushHistory(t, blockMeta, vol) {
+    t.history.push({
+      t: blockMeta ? blockMeta.time : Date.now(),
+      p: t.x / t.y,
+      v: typeof vol === 'number' && vol > 0 ? vol : 0,
+    });
     if (t.history.length > HISTORY_CAP) t.history.splice(0, t.history.length - HISTORY_CAP);
   }
 
@@ -249,6 +281,8 @@ function describeTx(tx, state) {
     case 'TRANSFER': return `→ ${String(p.to).slice(0, 14)}… ${p.amount} GRID`;
     case 'CREATE_TOKEN': return `created $${String(p.ticker).toUpperCase()}`;
     case 'PROFILE': return `set profile name → ${String(p.name).slice(0, 24)}`;
+    case 'TOKEN_TRANSFER': return `sent ${p.amount} $${String(p.token).toUpperCase()} → ${String(p.to).slice(0, 10)}…`;
+    case 'COMMENT': return `💬 $${String(p.token).toUpperCase()}: ${String(p.text).slice(0, 40)}`;
     case 'BUY': {
       const t = state.tokens[String(p.token || '').toUpperCase()];
       const price = t ? (t.x / t.y).toPrecision(4) : '?';

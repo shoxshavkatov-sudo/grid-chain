@@ -137,3 +137,38 @@ test('profile tx sets an on-chain name', () => {
   assert.throws(() => c.applyTx(makeTx(alice, c.state, 'PROFILE', { name: '' }), {}), (e) => e.code === 'bad_name');
   assert.throws(() => c.applyTx(makeTx(alice, c.state, 'PROFILE', { name: 'x'.repeat(25) }), {}), (e) => e.code === 'bad_name');
 });
+
+test('token transfer moves balances and holders', () => {
+  const c = freshChain();
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'TEST', name: 'Test Coin' }), { height: 1, time: 1 });
+  c.applyTx(makeTx(alice, c.state, 'BUY', { token: 'TEST', amount: 1000 }), { height: 1, time: 2 });
+  const bal = c.state.accounts[alice.address].tokens.TEST;
+  c.applyTx(makeTx(alice, c.state, 'TOKEN_TRANSFER', { token: 'TEST', to: bob.address, amount: 100 }), { height: 1, time: 3 });
+  assert.equal(c.state.accounts[alice.address].tokens.TEST, bal - 100);
+  assert.equal(c.state.accounts[bob.address].tokens.TEST, 100);
+  assert.equal(c.state.tokens.TEST.holders[bob.address], 100);
+  assert.throws(() => c.applyTx(makeTx(alice, c.state, 'TOKEN_TRANSFER', { token: 'TEST', to: bob.address, amount: 1e9 }), {}),
+    (e) => e.code === 'insufficient');
+});
+
+test('comment tx burns fee and stores the message on-chain', () => {
+  const c = freshChain();
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'TEST', name: 'Test Coin' }), { height: 1, time: 1 });
+  const before = c.state.accounts[alice.address].grid;
+  c.applyTx(makeTx(alice, c.state, 'COMMENT', { token: 'TEST', text: '  gm grid  ' }), { height: 1, time: 2 });
+  assert.equal(c.state.tokens.TEST.comments.length, 1);
+  assert.equal(c.state.tokens.TEST.comments[0].text, 'gm grid');
+  assert.equal(c.state.accounts[alice.address].grid, before - 1);
+  assert.throws(() => c.applyTx(makeTx(alice, c.state, 'COMMENT', { token: 'TEST', text: 'x'.repeat(201) }), {}),
+    (e) => e.code === 'bad_text');
+});
+
+test('history records volume for candles', () => {
+  const c = freshChain();
+  c.state.accounts[alice.address].grid = 100000;
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'VOLT', name: 'Volt' }), { height: 1, time: 1 });
+  c.applyTx(makeTx(alice, c.state, 'BUY', { token: 'VOLT', amount: 777 }), { height: 1, time: 2 });
+  const last = c.state.tokens.VOLT.history.at(-1);
+  assert.ok(last.v === 777, 'volume must be recorded in history');
+  assert.ok(last.p > 0);
+});

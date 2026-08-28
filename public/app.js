@@ -26,6 +26,13 @@ const I18N = {
     faucetNote: 'faucet: 5,000 GRID once per hour', neverShare: 'never share this — anyone with it owns the wallet',
     profile: 'Profile', profileName: 'display name (on-chain)', saveName: 'SET NAME',
     unnamed: 'unnamed', createdCoins: 'Created coins', activity: 'Activity', noActivity: 'no activity yet',
+    sendTitle: 'Send', recipient: 'recipient — address or @name', asset: 'asset',
+    sendBtn: 'SEND', recipientFound: '✓ recipient found', badRecipient: 'recipient not found',
+    enterRecipient: 'enter a recipient', sent: '✓ sent',
+    commentsTitle: 'Chat · on-chain', saySomething: 'say something…', post: 'POST',
+    commentFee: '1 GRID per message, burned on-chain · sealed into a block',
+    noComments: 'no messages yet — be the first to write on-chain',
+    walletToChat: 'connect a wallet to chat',
     copy: 'copy', copied: 'copied',
     queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
@@ -56,6 +63,13 @@ const I18N = {
     faucetNote: 'фосет: 5,000 GRID раз в час', neverShare: 'никому не показывайте — у кого ключ, тот владелец',
     profile: 'Профиль', profileName: 'имя (записывается на цепь)', saveName: 'СОХРАНИТЬ ИМЯ',
     unnamed: 'без имени', createdCoins: 'Созданные монеты', activity: 'Активность', noActivity: 'активности пока нет',
+    sendTitle: 'Отправить', recipient: 'получатель — адрес или @имя', asset: 'актив',
+    sendBtn: 'ОТПРАВИТЬ', recipientFound: '✓ получатель найден', badRecipient: 'получатель не найден',
+    enterRecipient: 'укажите получателя', sent: '✓ отправлено',
+    commentsTitle: 'Чат · на цепи', saySomething: 'напиши что-нибудь…', post: 'ОТПРАВИТЬ',
+    commentFee: '1 GRID за сообщение, сжигается на цепи · попадает в блок',
+    noComments: 'сообщений пока нет — напиши первое в блокчейне',
+    walletToChat: 'подключи кошелёк, чтобы писать в чат',
     copy: 'копировать', copied: 'скопировано',
     queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
@@ -86,6 +100,13 @@ const I18N = {
     faucetNote: 'fontan: soatiga bir marta 5,000 GRID', neverShare: 'hech kimga bermang — kalitga ega bo‘lgan hamyonga ega bo‘ladi',
     profile: 'Profil', profileName: 'ism (zanjirga yoziladi)', saveName: 'ISMNI SAQLASH',
     unnamed: 'nomsiz', createdCoins: 'Yaratilgan tangalar', activity: 'Faollik', noActivity: 'hali faollik yo‘q',
+    sendTitle: 'Yuborish', recipient: 'qabul qiluvchi — manzil yoki @ism', asset: 'aktiv',
+    sendBtn: 'YUBORISH', recipientFound: '✓ qabul qiluvchi topildi', badRecipient: 'qabul qiluvchi topilmadi',
+    enterRecipient: 'qabul qiluvchini kiriting', sent: '✓ yuborildi',
+    commentsTitle: 'Chat · zanjirda', saySomething: 'biror narsa yozing…', post: 'YUBORISH',
+    commentFee: 'har xabar 1 GRID, zanjirda kuydiriladi · blokka muhrlanadi',
+    noComments: 'xabarlar yo‘q — blokcheynga birinchi bo‘lib yozing',
+    walletToChat: 'chat yozish uchun hamyonni ulang',
     copy: 'nusxalash', copied: 'nusxalandi',
     queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
@@ -416,9 +437,28 @@ async function renderCoin(id) {
         <span class="a"><a href="#/profile/${esc(h.address)}" style="color:var(--dim)">${h.name ? esc(h.name) : esc(h.address)}</a></span>
         <span class="mono">${fmtNum(h.amount)}</span>
       </div>`).join('') || `<div class="row"><span class="a">${t('noHolders')}</span></div>`}
-    </div>`;
+    </div>
+    <div class="sec-title">${t('commentsTitle')}</div>
+    <div class="chat" style="max-width:640px">
+      ${(tk.comments || []).slice().reverse().map((c) => `
+        <div class="msg">
+          <div class="meta">
+            <a href="#/profile/${esc(c.from)}">${c.name ? esc(c.name) : short(c.from)}</a>
+            <span>${ago(c.time)}</span>
+          </div>
+          <div class="body">${esc(c.text)}</div>
+        </div>`).join('') || `<div class="msg"><div class="body" style="color:var(--dim)">${t('noComments')}</div></div>`}
+    </div>
+    ${w ? `
+    <div class="chat-input" style="max-width:640px">
+      <input id="cm-text" maxlength="200" placeholder="${esc(t('saySomething'))}">
+      <button class="btn" id="cm-btn" style="width:auto;padding:10px 18px">${t('post')}</button>
+    </div>
+    <p class="note" style="max-width:640px">${t('commentFee')}</p>` : `
+    <p class="note" style="max-width:640px">${t('walletToChat')} — <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></p>`}
+  `;
 
-  drawChart($('#chart'), tk.history);
+  drawCandles($('#chart'), tk.history);
   $('#buy-btn').onclick = async () => {
     const amt = Number($('#buy-amt').value);
     if (!(amt > 0)) return toast(t('enterAmount'));
@@ -431,10 +471,23 @@ async function renderCoin(id) {
     await sendTx('SELL', { token: tk.id, amount: amt });
     route();
   };
+  const cmBtn = $('#cm-btn');
+  if (cmBtn) {
+    cmBtn.onclick = async () => {
+      const text = $('#cm-text').value.trim();
+      if (!text) return;
+      $('#cm-text').value = '';
+      await sendTx('COMMENT', { token: tk.id, text });
+      renderCoin(id);
+    };
+    $('#cm-text').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') cmBtn.click();
+    });
+  }
   poll(async () => { if (!typing()) { try { await renderCoin(id); } catch {} } }, 6000);
 }
 
-function drawChart(canvas, history) {
+function drawCandles(canvas, history) {
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.clientWidth || 600, h = 240;
   canvas.width = w * dpr; canvas.height = h * dpr;
@@ -445,43 +498,109 @@ function drawChart(canvas, history) {
   const fg = css.getPropertyValue('--fg').trim() || '#fff';
   const dim = css.getPropertyValue('--dim').trim() || '#8a8a8a';
   const gridC = css.getPropertyValue('--chart-grid').trim() || 'rgba(255,255,255,.06)';
-  const fillTop = css.getPropertyValue('--chart-fill-top').trim() || 'rgba(255,255,255,.2)';
-  const pts = history.slice(-120);
+  const UP = '#2fd97f', DOWN = '#ff5252';
+
+  const pts = history.filter((x) => x && x.p > 0);
   if (pts.length < 2) {
     ctx.fillStyle = dim; ctx.font = '13px sans-serif';
     ctx.fillText(t('notEnoughChart'), 16, h / 2);
     return;
   }
-  const ps = pts.map((p) => p.p);
-  const min = Math.min(...ps), max = Math.max(...ps);
-  const pad = (max - min) * 0.15 || min * 0.2 || 1;
-  const lo = min - pad, hi = max + pad;
-  const X = (i) => 10 + (i / (pts.length - 1)) * (w - 20);
-  const Y = (v) => 14 + (1 - (v - lo) / (hi - lo)) * (h - 30);
 
-  ctx.strokeStyle = gridC; ctx.lineWidth = 1;
-  for (let i = 0; i <= 3; i++) {
-    const y = 14 + (i / 3) * (h - 30);
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  // bucket consecutive trades into candles (adaptive, ≤ 36 candles)
+  const MAX_CANDLES = 36;
+  const per = Math.max(1, Math.ceil(pts.length / MAX_CANDLES));
+  const candles = [];
+  for (let i = 0; i < pts.length; i += per) {
+    const slice = pts.slice(i, i + per);
+    const ps = slice.map((x) => x.p);
+    candles.push({
+      o: ps[0], c: ps[ps.length - 1],
+      h: Math.max(...ps), l: Math.min(...ps),
+      v: slice.reduce((n, x) => n + (x.v || 0), 0),
+      t: slice[0].t,
+    });
   }
-  // smooth curve through midpoints
-  const path = new Path2D();
-  path.moveTo(X(0), Y(ps[0]));
-  for (let i = 1; i < ps.length; i++) {
-    const xm = (X(i - 1) + X(i)) / 2, ym = (Y(ps[i - 1]) + Y(ps[i])) / 2;
-    path.quadraticCurveTo(X(i - 1), Y(ps[i - 1]), xm, ym);
+
+  const padL = 8, padR = 56, padT = 12;
+  const priceH = (h - padT - 26) * 0.76;
+  const volTop = padT + priceH + 14;
+  const volH = h - volTop - 18;
+  let lo = Math.min(...candles.map((c) => c.l));
+  let hi = Math.max(...candles.map((c) => c.h));
+  const range = (hi - lo) || hi * 0.1 || 1;
+  lo -= range * 0.06; hi += range * 0.06;
+  const maxVol = Math.max(...candles.map((c) => c.v), 1);
+  const plotW = w - padL - padR;
+  const slot = plotW / candles.length;
+  const Y = (p) => padT + (1 - (p - lo) / (hi - lo)) * priceH;
+  const XV = (v) => volH * (v / maxVol);
+
+  // grid + y labels
+  ctx.strokeStyle = gridC; ctx.fillStyle = dim; ctx.lineWidth = 1;
+  ctx.font = '10px ui-monospace, monospace';
+  for (let i = 0; i <= 4; i++) {
+    const p = lo + ((hi - lo) * i) / 4;
+    const y = Y(p);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+    ctx.fillText(fmtPrice(p), w - padR + 6, y + 3);
   }
-  path.lineTo(X(ps.length - 1), Y(ps[ps.length - 1]));
-  const fill = new Path2D(path);
-  fill.lineTo(X(ps.length - 1), h); fill.lineTo(X(0), h); fill.closePath();
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, fillTop); grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grad; ctx.fill(fill);
-  ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.stroke(path);
-  const lastX = X(ps.length - 1), lastY = Y(ps[ps.length - 1]);
-  ctx.beginPath(); ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
-  ctx.fillStyle = fg; ctx.fill();
+
+  candles.forEach((c, i) => {
+    const x = padL + slot * i + slot / 2;
+    const up = c.c >= c.o;
+    const col = up ? UP : DOWN;
+    // volume bar
+    ctx.fillStyle = col + '55';
+    const bw = Math.max(2, slot * 0.62);
+    ctx.fillRect(x - bw / 2, h - 18 - XV(c.v), bw, XV(c.v));
+    // wick
+    ctx.strokeStyle = col; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x, Y(c.h)); ctx.lineTo(x, Y(c.l)); ctx.stroke();
+    // body
+    const by1 = Y(Math.max(c.o, c.c));
+    const by2 = Y(Math.min(c.o, c.c));
+    const bodyH = Math.max(1.4, by2 - by1);
+    ctx.fillStyle = col;
+    ctx.fillRect(x - bw / 2, by1, bw, bodyH);
+  });
+
+  // last price line + tag
+  const last = candles[candles.length - 1];
+  const ly = Y(last.c);
+  const lcol = last.c >= last.o ? UP : DOWN;
+  ctx.strokeStyle = lcol; ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(padL, ly); ctx.lineTo(w - padR, ly); ctx.stroke();
+  ctx.setLineDash([]);
+  const label = fmtPrice(last.c);
+  ctx.font = '700 10px ui-monospace, monospace';
+  const tw = ctx.measureText(label).width + 10;
+  ctx.fillStyle = lcol;
+  roundRect(ctx, w - padR + 2, ly - 8, Math.max(tw, padR - 6), 16, 4);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.fillText(label, w - padR + 8, ly + 3);
+
+  // x labels
+  ctx.fillStyle = dim;
+  ctx.font = '10px ui-monospace, monospace';
+  const t0 = new Date(pts[0].t), t1 = new Date(pts[pts.length - 1].t);
+  const hm = (d) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  ctx.fillText(hm(t0), padL, h - 4);
+  const mid = hm(new Date((pts[0].t + pts[pts.length - 1].t) / 2));
+  ctx.fillText(mid, padL + plotW / 2 - 12, h - 4);
+  ctx.fillText(hm(t1), w - padR - 26, h - 4);
+}
+
+function roundRect(ctx, x, y, w2, h2, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w2, y, x + w2, y + h2, r);
+  ctx.arcTo(x + w2, y + h2, x, y + h2, r);
+  ctx.arcTo(x, y + h2, x, y, r);
+  ctx.arcTo(x, y, x + w2, y, r);
+  ctx.closePath();
 }
 
 // ---------------------------------------------------------------- create
@@ -565,6 +684,19 @@ async function renderWallet() {
           <span><a href="#/coin/${esc(tk.id)}" style="color:var(--fg)" class="mono">$${esc(tk.ticker || tk.id)}</a></span>
           <b class="mono">${fmtNum(tk.amount)}</b></div>`).join('')}
       </div>
+      <div class="panel" style="margin-top:18px">
+        <h3>${t('sendTitle')}</h3>
+        <div class="field">
+          <label>${t('asset')}</label>
+          <select id="s-asset">
+            <option value="GRID" data-max="${acc.grid}">GRID — ${fmtNum(acc.grid, 4)}</option>
+            ${acc.tokens.map((tk) => `<option value="${esc(tk.id)}" data-max="${tk.amount}">$${esc(tk.ticker || tk.id)} — ${fmtNum(tk.amount)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>${t('recipient')}</label><input id="s-to" placeholder="grid1… / @name"></div>
+        <div class="field"><label>${t('amountGrid')}</label><input id="s-amt" type="number" min="0" placeholder="0.0"></div>
+        <button class="btn" id="s-btn">${t('sendBtn')}</button>
+      </div>
       <div class="quick" style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <button class="btn" id="w-faucet">${t('getTestGrid')}</button>
         <button class="btn ghost" id="w-show">${t('showSecret')}</button>
@@ -572,6 +704,35 @@ async function renderWallet() {
       <p class="note">${t('faucetNote')}</p>
     </div>`;
   $('#w-copy').onclick = () => copyText(w.address);
+
+  async function resolveRecipient(raw) {
+    raw = raw.trim();
+    if (/^grid1[0-9a-f]{40}$/.test(raw)) return raw;
+    const name = raw.replace(/^@/, '');
+    if (!name) return null;
+    try {
+      const r = await api('/resolve/' + encodeURIComponent(name));
+      toast(t('recipientFound') + ': ' + (r.name || ''));
+      return r.address;
+    } catch { return null; }
+  }
+
+  $('#s-btn').onclick = async () => {
+    const asset = $('#s-asset').value;
+    const amt = Number($('#s-amt').value);
+    if (!(amt > 0)) return toast(t('enterAmount'));
+    const rawTo = $('#s-to').value;
+    if (!rawTo) return toast(t('enterRecipient'));
+    const to = await resolveRecipient(rawTo);
+    if (!to) return toast(t('badRecipient'));
+    if (asset === 'GRID') {
+      await sendTx('TRANSFER', { to, amount: amt });
+    } else {
+      await sendTx('TOKEN_TRANSFER', { token: asset, to, amount: amt });
+    }
+    toast(t('sent'));
+    renderWallet();
+  };
   $('#w-faucet').onclick = async () => {
     try {
       await api('/faucet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: w.address }) });

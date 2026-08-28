@@ -143,7 +143,22 @@ async function route(req, res, url) {
       }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 20);
-    return json(res, 200, { ...tokenSummary(t, chain.state), history: t.history, holders });
+    const comments = (t.comments || []).map((c) => ({
+      from: c.from,
+      name: (chain.state.profiles && chain.state.profiles[c.from] && chain.state.profiles[c.from].name) || null,
+      text: c.text,
+      time: c.time,
+    }));
+    return json(res, 200, { ...tokenSummary(t, chain.state), history: t.history, holders, comments });
+  }
+
+  if (p.startsWith('/api/resolve/')) {
+    const name = decodeURIComponent(p.split('/')[3] || '').trim().toLowerCase();
+    if (!name) return json(res, 400, { error: 'empty name' });
+    const entry = Object.entries(chain.state.profiles || {})
+      .find(([addr, prof]) => prof.name && prof.name.toLowerCase() === name);
+    if (!entry) return json(res, 404, { error: 'name not found' });
+    return json(res, 200, { address: entry[0], name: entry[1].name });
   }
 
   if (p.startsWith('/api/profile/')) {
