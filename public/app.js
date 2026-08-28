@@ -69,6 +69,8 @@ const I18N = {
     registerOk: '✓ account created', regPrompt: 'or create an account with login & password',
     loginPrompt: 'already have an account? log in', accountWallet: 'account wallet', localWallet: 'local wallet',
     useAccount: 'USE ACCOUNT', useLocal: 'USE LOCAL WALLET', twoWallets: 'you have both a local wallet and a logged-in account — different addresses',
+    obTagline: 'launch coins · trade on-chain', guest: 'continue without an account →',
+    cardStyle: 'card',
     copy: 'copy', copied: 'copied',
     queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
@@ -143,6 +145,8 @@ const I18N = {
     registerOk: '✓ аккаунт создан', regPrompt: 'или создай аккаунт с логином и паролем',
     loginPrompt: 'уже есть аккаунт? войди', accountWallet: 'аккаунт-кошелёк', localWallet: 'локальный кошелёк',
     useAccount: 'ИСПОЛЬЗОВАТЬ АККАУНТ', useLocal: 'ИСПОЛЬЗОВАТЬ ЛОКАЛЬНЫЙ КОШЕЛЁК', twoWallets: 'у тебя есть и локальный кошелёк, и аккаунт — это разные адреса',
+    obTagline: 'запускай монеты · торгуй на цепи', guest: 'продолжить без аккаунта →',
+    cardStyle: 'карта',
     copy: 'копировать', copied: 'скопировано',
     queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
@@ -217,6 +221,8 @@ const I18N = {
     registerOk: '✓ akkaunt yaratildi', regPrompt: 'yoki login va parol bilan akkaunt yarating',
     loginPrompt: 'akkauntingiz bormi? kiring', accountWallet: 'akkaunt-hamyon', localWallet: 'lokal hamyon',
     useAccount: 'AKKAUNTDAN FOYDALANISH', useLocal: 'LOKAL HAMYONDAN FOYDALANISH', twoWallets: 'ham lokal hamyon, ham akkaunt bor — bular turli manzillar',
+    obTagline: 'tangalarni ishga tushir · zanjirda savdo qil', guest: 'akkauntsiz davom etish →',
+    cardStyle: 'karta',
     copy: 'nusxalash', copied: 'nusxalandi',
     queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
@@ -422,6 +428,24 @@ async function signWith(secretHex, msgBytes) {
   return new Uint8Array(await crypto.subtle.sign(algo, key, msgBytes));
 }
 
+// ---------------------------------------------------------------- card skins
+const SKINS = [
+  { id: 'midnight', css: 'linear-gradient(135deg,#17171a,#0b0b0d 70%)' },
+  { id: 'aurora', css: 'linear-gradient(135deg,#241a3e,#2fd97f 160%)' },
+  { id: 'gold', css: 'linear-gradient(135deg,#1d1608,#c9a227 170%)' },
+  { id: 'carbon', css: 'linear-gradient(135deg,#1a1a1c,#8a1f1f 170%)' },
+  { id: 'platinum', css: 'linear-gradient(135deg,#eceef2,#9aa0a8)' },
+  { id: 'neon', css: 'linear-gradient(135deg,#03140a,#0f5132 150%)' },
+];
+function cardSkin() {
+  const s = localStorage.getItem('gridchain_skin');
+  return SKINS.some((x) => x.id === s) ? s : 'midnight';
+}
+function setCardSkin(id) {
+  localStorage.setItem('gridchain_skin', id);
+  route();
+}
+
 // ---------------------------------------------------------------- auth
 const AUTH = { token: localStorage.getItem('gridchain_token'), me: null };
 
@@ -512,6 +536,10 @@ function setActiveTab(route) {
 
 async function route() {
   stopPoll();
+  // auth gate: first visit without an account or wallet → onboarding screen
+  if (!currentAccount() && !localStorage.getItem('gridchain_onboarded')) {
+    return renderOnboarding();
+  }
   const parts = (location.hash || '#/').slice(2).split('/').filter(Boolean);
   const page = parts[0] || '';
   setActiveTab('/' + page);
@@ -540,6 +568,28 @@ window.addEventListener('hashchange', route);
     try { tg.setBackgroundColor('#000000'); tg.setHeaderColor('#000000'); } catch {}
   }
 })();
+
+// ---------------------------------------------------------------- onboarding
+function renderOnboarding() {
+  document.querySelectorAll('.tab').forEach((el) => el.classList.remove('active'));
+  viewEl.innerHTML = `
+    <div class="onboard">
+      <div class="ob-logo"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="ob-title">GRID&nbsp;CHAIN</h1>
+      <p class="ob-tag">${t('obTagline')}</p>
+      <div class="panel ob-panel">
+        ${authFormsHtml()}
+        <div style="height:14px"></div>
+        <button class="btn ghost" id="ob-guest">${t('guest')}</button>
+      </div>
+    </div>`;
+  bindAuthForms();
+  $('#ob-guest').onclick = () => {
+    localStorage.setItem('gridchain_onboarded', '1');
+    location.hash = '#/wallet';
+    route();
+  };
+}
 
 // ---------------------------------------------------------------- home
 async function renderHome() {
@@ -1035,6 +1085,7 @@ function bindAuthForms() {
       AUTH.token = r.token;
       AUTH.me = { username: r.username, address: r.address, public: r.public };
       localStorage.setItem('gridchain_token', r.token);
+      localStorage.setItem('gridchain_onboarded', '1');
       toast(t('registerOk') + ' — ' + r.username);
       switchToAccount();
     } catch (e) { toast(e.message === 'username already taken' ? t('userExists') : e.message); }
@@ -1047,6 +1098,7 @@ function bindAuthForms() {
       AUTH.token = r.token;
       AUTH.me = { username: r.username, address: r.address, public: r.public };
       localStorage.setItem('gridchain_token', r.token);
+      localStorage.setItem('gridchain_onboarded', '1');
       toast('✓ ' + r.username);
       switchToAccount();
     } catch { toast(t('authFailed')); }
@@ -1122,7 +1174,7 @@ async function renderWallet() {
   }).join('');
   viewEl.innerHTML = `
     <div class="narrow">
-      <div class="pay-card">
+      <div class="pay-card skin-${esc(cardSkin())}">
         <div class="pc-top">
           <span class="pc-brand"><span class="mini-grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>GRID</span>
           <span class="pc-mode">${acct.username ? '@' + esc(acct.username) : esc(t('localWallet'))}</span>
@@ -1138,6 +1190,10 @@ async function renderWallet() {
           <button class="pc-addr mono" id="pc-copy" title="${t('copy')}">${short(addr)} ⧉</button>
           <span class="pc-net"><span class="live-dot"></span>GRID CHAIN</span>
         </div>
+      </div>
+      <div class="skin-row">
+        <span class="sk-label">${t('cardStyle')}</span>
+        ${SKINS.map((s) => `<button class="skin-dot ${cardSkin() === s.id ? 'on' : ''}" data-skin="${s.id}" style="background:${s.css}" title="${s.id}"></button>`).join('')}
       </div>
       ${acc.tokens.length ? `
       <div class="chip-row">
@@ -1179,6 +1235,9 @@ async function renderWallet() {
       </div>
     </div>`;
   $('#pc-copy').onclick = () => copyText(addr);
+  viewEl.querySelectorAll('.skin-dot').forEach((b) => {
+    b.onclick = () => setCardSkin(b.dataset.skin);
+  });
   const lo = $('#w-logout');
   if (lo) lo.onclick = async () => {
     try { await apiAuth('/auth/logout', {}); } catch {}
