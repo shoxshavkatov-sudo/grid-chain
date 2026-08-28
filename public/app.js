@@ -69,6 +69,7 @@ const I18N = {
     loggedInAs: 'account', authFailed: 'wrong username or password', userExists: 'username taken',
     registerOk: '✓ account created', regPrompt: 'or create an account with login & password',
     loginPrompt: 'already have an account? log in', accountWallet: 'account wallet', localWallet: 'local wallet',
+    useAccount: 'USE ACCOUNT', useLocal: 'USE LOCAL WALLET', twoWallets: 'you have both a local wallet and a logged-in account — different addresses',
     copy: 'copy', copied: 'copied',
     queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
@@ -142,6 +143,7 @@ const I18N = {
     loggedInAs: 'аккаунт', authFailed: 'неверный логин или пароль', userExists: 'логин занят',
     registerOk: '✓ аккаунт создан', regPrompt: 'или создай аккаунт с логином и паролем',
     loginPrompt: 'уже есть аккаунт? войди', accountWallet: 'аккаунт-кошелёк', localWallet: 'локальный кошелёк',
+    useAccount: 'ИСПОЛЬЗОВАТЬ АККАУНТ', useLocal: 'ИСПОЛЬЗОВАТЬ ЛОКАЛЬНЫЙ КОШЕЛЁК', twoWallets: 'у тебя есть и локальный кошелёк, и аккаунт — это разные адреса',
     copy: 'копировать', copied: 'скопировано',
     queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
@@ -215,6 +217,7 @@ const I18N = {
     loggedInAs: 'akkaunt', authFailed: 'login yoki parol xato', userExists: 'login band',
     registerOk: '✓ akkaunt yaratildi', regPrompt: 'yoki login va parol bilan akkaunt yarating',
     loginPrompt: 'akkauntingiz bormi? kiring', accountWallet: 'akkaunt-hamyon', localWallet: 'lokal hamyon',
+    useAccount: 'AKKAUNTDAN FOYDALANISH', useLocal: 'LOKAL HAMYONDAN FOYDALANISH', twoWallets: 'ham lokal hamyon, ham akkaunt bor — bular turli manzillar',
     copy: 'nusxalash', copied: 'nusxalandi',
     queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
@@ -423,11 +426,37 @@ async function signWith(secretHex, msgBytes) {
 // ---------------------------------------------------------------- auth
 const AUTH = { token: localStorage.getItem('gridchain_token'), me: null };
 
+function walletMode() {
+  return localStorage.getItem('gridchain_mode') || 'local'; // 'local' | 'account'
+}
+function setWalletMode(m) { localStorage.setItem('gridchain_mode', m); }
+
 function currentAccount() {
   const w = loadWallet();
+  const mode = walletMode();
+  if (mode === 'account' && AUTH.me) return { address: AUTH.me.address, local: false, username: AUTH.me.username };
+  if (mode === 'local' && w) return { address: w.address, local: true };
+  // no explicit mode — use whatever exists
   if (w) return { address: w.address, local: true };
   if (AUTH.me) return { address: AUTH.me.address, local: false, username: AUTH.me.username };
   return null;
+}
+
+// switch to account mode; the old local wallet is kept as a restorable backup
+function switchToAccount() {
+  const w = loadWallet();
+  if (w && !localStorage.getItem('gridchain_wallet_backup')) {
+    localStorage.setItem('gridchain_wallet_backup', JSON.stringify(w));
+  }
+  if (w) localStorage.removeItem('gridchain_wallet');
+  setWalletMode('account');
+  route();
+}
+function switchToLocal() {
+  const backup = localStorage.getItem('gridchain_wallet_backup');
+  if (backup) localStorage.setItem('gridchain_wallet', backup);
+  setWalletMode('local');
+  route();
 }
 
 function requireWallet() {
@@ -982,10 +1011,53 @@ async function renderCreate() {
 }
 
 // ---------------------------------------------------------------- wallet
+function authFormsHtml() {
+  return `
+    <h3>${t('register')}</h3>
+    <p class="note" style="margin-bottom:14px">${t('authNote')}</p>
+    <div class="field"><label>${t('username')}</label><input id="r-user" maxlength="24" placeholder="satoshi_vibes"></div>
+    <div class="field"><label>${t('password')}</label><input id="r-pass" type="password" placeholder="••••••"></div>
+    <button class="btn" id="r-btn">${t('registerBtn')}</button>
+    <div style="height:14px"></div>
+    <h3>${t('login')}</h3>
+    <div class="field"><label>${t('username')}</label><input id="l-user" maxlength="24"></div>
+    <div class="field"><label>${t('password')}</label><input id="l-pass" type="password"></div>
+    <button class="btn ghost" id="l-btn">${t('loginBtn')}</button>`;
+}
+
+function bindAuthForms() {
+  $('#r-btn').onclick = async () => {
+    const username = $('#r-user').value.trim();
+    const password = $('#r-pass').value;
+    if (username.length < 3) return toast(t('userExists'));
+    if (password.length < 6) return toast(t('authFailed'));
+    try {
+      const r = await api('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      AUTH.token = r.token;
+      AUTH.me = { username: r.username, address: r.address, public: r.public };
+      localStorage.setItem('gridchain_token', r.token);
+      toast(t('registerOk') + ' — ' + r.username);
+      switchToAccount();
+    } catch (e) { toast(e.message === 'username already taken' ? t('userExists') : e.message); }
+  };
+  $('#l-btn').onclick = async () => {
+    const username = $('#l-user').value.trim();
+    const password = $('#l-pass').value;
+    try {
+      const r = await api('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      AUTH.token = r.token;
+      AUTH.me = { username: r.username, address: r.address, public: r.public };
+      localStorage.setItem('gridchain_token', r.token);
+      toast('✓ ' + r.username);
+      switchToAccount();
+    } catch { toast(t('authFailed')); }
+  };
+}
+
 async function renderWallet() {
   const w = loadWallet();
   const acct = currentAccount();
-  if (!w && !acct) {
+  if (!acct) {
     viewEl.innerHTML = `
       <div class="narrow">
         <div class="sec-title">${t('walletTitle')}</div>
@@ -996,22 +1068,12 @@ async function renderWallet() {
           <button class="btn ghost" id="w-import">${t('importSecret')}</button>
           <p class="note" id="ed-note"></p>
         </div>
-        <div class="panel">
-          <h3>${t('register')}</h3>
-          <p class="note" style="margin-bottom:14px">${t('authNote')}</p>
-          <div class="field"><label>${t('username')}</label><input id="r-user" maxlength="24" placeholder="satoshi_vibes"></div>
-          <div class="field"><label>${t('password')}</label><input id="r-pass" type="password" placeholder="••••••"></div>
-          <button class="btn" id="r-btn">${t('registerBtn')}</button>
-          <div style="height:14px"></div>
-          <h3>${t('login')}</h3>
-          <div class="field"><label>${t('username')}</label><input id="l-user" maxlength="24"></div>
-          <div class="field"><label>${t('password')}</label><input id="l-pass" type="password"></div>
-          <button class="btn ghost" id="l-btn">${t('loginBtn')}</button>
-        </div>
+        <div class="panel">${authFormsHtml()}</div>
       </div>`;
     $('#w-new').onclick = async () => {
       const kp = await api('/wallet/new', { method: 'POST', body: '{}' });
       saveWallet(kp);
+      setWalletMode('local');
       toast(t('confirmed'));
       renderWallet();
     };
@@ -1025,37 +1087,13 @@ async function renderWallet() {
         const pubHex = base64ToHex(jwk.x);
         const { address } = await api('/address-of/' + pubHex);
         saveWallet({ address, public: pubHex, secret: secret.trim() });
+        setWalletMode('local');
         toast(t('imported'));
         renderWallet();
       } catch { toast(t('importFailed')); }
     };
     $('#ed-note').textContent = (window.crypto && crypto.subtle) ? '' : t('noWebcrypto');
-    $('#r-btn').onclick = async () => {
-      const username = $('#r-user').value.trim();
-      const password = $('#r-pass').value;
-      if (username.length < 3) return toast(t('userExists'));
-      if (password.length < 6) return toast(t('authFailed'));
-      try {
-        const r = await api('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-        AUTH.token = r.token;
-        AUTH.me = { username: r.username, address: r.address, public: r.public };
-        localStorage.setItem('gridchain_token', r.token);
-        toast(t('registerOk') + ' — ' + r.username);
-        renderWallet();
-      } catch (e) { toast(e.message === 'username already taken' ? t('userExists') : e.message); }
-    };
-    $('#l-btn').onclick = async () => {
-      const username = $('#l-user').value.trim();
-      const password = $('#l-pass').value;
-      try {
-        const r = await api('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-        AUTH.token = r.token;
-        AUTH.me = { username: r.username, address: r.address, public: r.public };
-        localStorage.setItem('gridchain_token', r.token);
-        toast('✓ ' + r.username);
-        renderWallet();
-      } catch { toast(t('authFailed')); }
-    };
+    bindAuthForms();
     return;
   }
 
@@ -1090,8 +1128,7 @@ async function renderWallet() {
       ${acct.username ? `
       <div class="quick" style="display:flex;gap:10px;margin-bottom:14px;align-items:center">
         <span class="tag">${t('accountWallet')}: <b>${esc(acct.username)}</b></span>
-        <button class="btn ghost" id="w-logout" style="width:auto;padding:6px 14px;font-size:11px">${t('logout')}</button>
-      </div>` : ''}
+      </div>` : w ? `<p class="note" style="margin-bottom:12px">${t('localWallet')}</p>` : ''}
       <div class="bal-list">
         <div class="row"><span>GRID</span><b class="mono">${fmtNum(acc.grid, 4)}</b></div>
         ${acc.tokens.map((tk) => `<div class="row">
@@ -1116,9 +1153,22 @@ async function renderWallet() {
       </div>
       <div class="quick" style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <button class="btn" id="w-faucet">${t('getTestGrid')}</button>
-        <button class="btn ghost" id="w-show">${t('showSecret')}</button>
+        ${w ? `<button class="btn ghost" id="w-show">${t('showSecret')}</button>` : ''}
       </div>
       <p class="note">${t('faucetNote')}</p>
+      <div class="sec-title">${t('login')} / ${t('register')}</div>
+      <div class="panel">
+        ${AUTH.me ? `
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="tag">${t('loggedInAs')}: <b>${esc(AUTH.me.username)}</b></span>
+            <button class="btn ghost" id="w-logout" style="width:auto;padding:6px 14px;font-size:11px">${t('logout')}</button>
+          </div>
+          ${localStorage.getItem('gridchain_wallet_backup') ? `
+            <p class="note">${t('twoWallets')}</p>
+            ${w ? `<button class="btn ghost" id="w-use-acct" style="margin-top:10px">${t('useAccount')}</button>`
+                : `<button class="btn ghost" id="w-use-local" style="margin-top:10px">${t('useLocal')}</button>`}` : ''}`
+          : authFormsHtml()}
+      </div>
     </div>`;
   $('#w-copy').onclick = () => copyText(addr);
   const lo = $('#w-logout');
@@ -1130,6 +1180,11 @@ async function renderWallet() {
     toast('👋');
     renderWallet();
   };
+  const ua = $('#w-use-acct');
+  if (ua) ua.onclick = switchToAccount;
+  const ul = $('#w-use-local');
+  if (ul) ul.onclick = switchToLocal;
+  if (!AUTH.me) bindAuthForms();
 
   async function resolveRecipient(raw) {
     raw = raw.trim();
@@ -1552,8 +1607,8 @@ function applyLang() {
     updateMuteIcon();
     if (!MUTED) beep(880, 0.06);
   };
-  // restore an account session (login/password users without a local wallet)
-  if (AUTH.token && !loadWallet()) {
+  // restore an account session (login/password users)
+  if (AUTH.token) {
     try {
       AUTH.me = await api('/auth/me', { method: 'POST', headers: { Authorization: 'Bearer ' + AUTH.token } });
     } catch {
