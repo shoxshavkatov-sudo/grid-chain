@@ -1,13 +1,15 @@
-// GRID Chain HTTP server: JSON API + SSE stream + OG cards + static frontend.
+// GRID Chain HTTP server: JSON API + auth (login/password accounts wrapping
+// keypair wallets) + SSE stream + OG cards + static frontend.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomBytes, scryptSync, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
 import { GridNode } from './src/node.js';
 import {
-  ChainError, CREATE_FEE, FAUCET_TOTAL, GRADUATION_TARGET, TOTAL_SUPPLY, V_GRID, txHash,
+  ChainError, CREATE_FEE, FAUCET_TOTAL, GRADUATION_TARGET, TOTAL_SUPPLY, V_GRID, txHash, txPayload,
 } from './src/chain.js';
-import { randomKeypair, addressFromPub } from './src/util.js';
+import { randomKeypair, addressFromPub, signMsg } from './src/util.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -20,6 +22,52 @@ node.start();
 
 const faucetLast = new Map(); // address -> last claim timestamp
 const sseClients = new Set(); // open event-stream connections
+
+// ---------------------------------------------------------------------------
+// Accounts with login/password. The keypair secret is stored AES-256-GCM
+// encrypted with the password; a login session keeps the decrypted secret in
+// RAM only, and signs transactions via the /api/relay endpoint.
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+function loadUsers() {
+  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { return {}; }
+}
+function saveUsers() {
+  try { fs.writeFileSync(USERS_FILE, JSON.stringify(users)); } catch (e) { console.error('[auth] users save failed:', e.message); }
+}
+const users = loadUsers();
+const sessions = new Map(); // token -> { username, secret, address, public, created }
+
+function hashPassword(password, saltHex) {
+  return scryptSync(password, Buffer.from(saltHex, 'hex'), 32);
+}
+function encryptSecret(secret, password) {
+  const salt = randomBytes(16);
+  const key = scryptSync(password, salt, 32);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const data = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
+  return {
+    salt: salt.toString('hex'), iv: iv.toString('hex'),
+    tag: cipher.getAuthTag().toString('hex'), data: data.toString('hex'),
+  };
+}
+function decryptSecret(enc, password) {
+  const key = scryptSync(password, Buffer.from(enc.salt, 'hex'), 32);
+  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(enc.iv, 'hex'));
+  decipher.setAuthTag(Buffer.from(enc.tag, 'hex'));
+  return Buffer.concat([decipher.update(Buffer.from(enc.data, 'hex')), decipher.final()]).toString('utf8');
+}
+function issueToken(user, username, password) {
+  const token = randomBytes(24).toString('hex');
+  sessions.set(token, {
+    username,
+    secret: decryptSecret(user.enc, password),
+    address: user.address,
+    public: user.public,
+    created: Date.now(),
+  });
+  return token;
+}
 
 node.onBlock((block, chain) => {
   const prices = {};
@@ -147,6 +195,90 @@ async function route(req, res, url) {
   const p = url.pathname;
   const q = url.searchParams;
   const chain = node.chain;
+
+  if (p === '/api/auth/register' && req.method === 'POST') {
+    const body = await readBody(req);
+    const username = String(body.username || '').trim();
+    const password = String(body.password || '');
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+      return json(res, 400, { error: 'username must be 3-24 chars: letters, digits, _' });
+    }
+    if (password.length < 6 || password.length > 128) {
+      return json(res, 400, { error: 'password must be 6-128 chars' });
+    }
+    const key = username.toLowerCase();
+    if (users[key]) return json(res, 409, { error: 'username already taken' });
+    if ((chain.state.profiles || {}) && Object.values(chain.state.profiles).some((pr) => pr.name && pr.name.toLowerCase() === key)) {
+      return json(res, 409, { error: 'this name is already used on-chain' });
+    }
+    const kp = randomKeypair();
+    // on-chain identity right away: profile name = username, signed by the node
+    try {
+      const tx = { type: 'PROFILE', from: kp.address, nonce: 0, params: { name: username }, pub: kp.public };
+      tx.sig = signMsg(kp.secret, txPayload(tx));
+      node.submitTx(tx);
+    } catch (e) {
+      console.warn('[auth] profile tx failed:', e.message);
+    }
+    const salt = randomBytes(16).toString('hex');
+    users[key] = {
+      username,
+      salt,
+      hash: hashPassword(password, salt).toString('hex'),
+      enc: encryptSecret(kp.secret, password),
+      address: kp.address,
+      public: kp.public,
+      created: Date.now(),
+    };
+    saveUsers();
+    const token = issueToken(users[key], key, password);
+    return json(res, 200, { token, username, address: kp.address, public: kp.public });
+  }
+
+  if (p === '/api/auth/login' && req.method === 'POST') {
+    const body = await readBody(req);
+    const key = String(body.username || '').trim().toLowerCase();
+    const user = users[key];
+    if (!user) return json(res, 401, { error: 'wrong username or password' });
+    const hash = hashPassword(String(body.password || ''), user.salt);
+    if (!timingSafeEqual(hash, Buffer.from(user.hash, 'hex'))) {
+      return json(res, 401, { error: 'wrong username or password' });
+    }
+    const token = issueToken(user, key, String(body.password || ''));
+    return json(res, 200, { token, username: user.username, address: user.address, public: user.public });
+  }
+
+  if (p === '/api/auth/me' && req.method === 'POST') {
+    const token = String((req.headers.authorization || '').replace(/^Bearer /i, '') || '');
+    const s = sessions.get(token);
+    if (!s) return json(res, 401, { error: 'session expired, login again' });
+    return json(res, 200, { username: s.username, address: s.address, public: s.public });
+  }
+
+  if (p === '/api/auth/logout' && req.method === 'POST') {
+    const token = String((req.headers.authorization || '').replace(/^Bearer /i, '') || '');
+    sessions.delete(token);
+    return json(res, 200, { ok: true });
+  }
+
+  // Sign a transaction with the session's wallet (for logged-in users without
+  // a local browser key). Same validation path as client-signed txs.
+  if (p === '/api/relay' && req.method === 'POST') {
+    const token = String((req.headers.authorization || '').replace(/^Bearer /i, '') || '');
+    const s = sessions.get(token);
+    if (!s) return json(res, 401, { error: 'session expired, login again' });
+    const body = await readBody(req);
+    const nonce = (chain.state.accounts[s.address] || { nonce: 0 }).nonce;
+    const tx = { type: String(body.type || ''), from: s.address, nonce, params: body.params || {}, pub: s.public };
+    try {
+      tx.sig = signMsg(s.secret, txPayload(tx));
+      node.submitTx(tx);
+    } catch (e) {
+      if (e instanceof ChainError) return json(res, 400, { error: e.message, code: e.code });
+      throw e;
+    }
+    return json(res, 200, { ok: true, queued: true, tx });
+  }
 
   if (p === '/api/health') {
     return json(res, 200, { ok: true, height: chain.height(), store: node.store.mode });

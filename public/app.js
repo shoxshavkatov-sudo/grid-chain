@@ -63,6 +63,12 @@ const I18N = {
     settingsTitle: 'Settings', usdtRateLabel: 'GRID price in USDT', save: 'SAVE',
     depositsTitle: 'Buy requests', approve: 'APPROVE', reject: 'REJECT',
     noDeposits: 'no requests yet', youAreAdmin: 'you are root admin', notAdmin: 'connect the admin wallet',
+    login: 'Login', register: 'Create account', username: 'username', password: 'password',
+    loginBtn: 'LOG IN', registerBtn: 'REGISTER', logout: 'LOG OUT',
+    authNote: 'account = wallet + password backup. log in from any device',
+    loggedInAs: 'account', authFailed: 'wrong username or password', userExists: 'username taken',
+    registerOk: '✓ account created', regPrompt: 'or create an account with login & password',
+    loginPrompt: 'already have an account? log in', accountWallet: 'account wallet', localWallet: 'local wallet',
     copy: 'copy', copied: 'copied',
     queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
@@ -130,6 +136,12 @@ const I18N = {
     settingsTitle: 'Настройки', usdtRateLabel: 'Цена GRID в USDT', save: 'СОХРАНИТЬ',
     depositsTitle: 'Заявки на покупку', approve: 'ОДОБРИТЬ', reject: 'ОТКЛОНИТЬ',
     noDeposits: 'заявок пока нет', youAreAdmin: 'ты root-админ', notAdmin: 'подключи кошелёк админа',
+    login: 'Вход', register: 'Регистрация', username: 'логин', password: 'пароль',
+    loginBtn: 'ВОЙТИ', registerBtn: 'СОЗДАТЬ АККАУНТ', logout: 'ВЫЙТИ',
+    authNote: 'аккаунт = кошелёк + пароль для восстановления. вход с любого устройства',
+    loggedInAs: 'аккаунт', authFailed: 'неверный логин или пароль', userExists: 'логин занят',
+    registerOk: '✓ аккаунт создан', regPrompt: 'или создай аккаунт с логином и паролем',
+    loginPrompt: 'уже есть аккаунт? войди', accountWallet: 'аккаунт-кошелёк', localWallet: 'локальный кошелёк',
     copy: 'копировать', copied: 'скопировано',
     queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
@@ -197,6 +209,12 @@ const I18N = {
     settingsTitle: 'Sozlamalar', usdtRateLabel: 'GRID narxi USDTda', save: 'SAQLASH',
     depositsTitle: 'Sotib olish so‘rovlari', approve: 'TASDIQLASH', reject: 'RAD ETISH',
     noDeposits: 'so‘rovlar yo‘q', youAreAdmin: 'sen root-adminsan', notAdmin: 'admin hamyonini ulang',
+    login: 'Kirish', register: 'Ro‘yxatdan o‘tish', username: 'login', password: 'parol',
+    loginBtn: 'KIRISH', registerBtn: 'AKKAUNT YARATISH', logout: 'CHIQISH',
+    authNote: 'akkaunt = hamyon + parol bilan zaxira. har qurilmadan kirish',
+    loggedInAs: 'akkaunt', authFailed: 'login yoki parol xato', userExists: 'login band',
+    registerOk: '✓ akkaunt yaratildi', regPrompt: 'yoki login va parol bilan akkaunt yarating',
+    loginPrompt: 'akkauntingiz bormi? kiring', accountWallet: 'akkaunt-hamyon', localWallet: 'lokal hamyon',
     copy: 'nusxalash', copied: 'nusxalandi',
     queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
@@ -388,11 +406,6 @@ function loadWallet() {
   try { return JSON.parse(localStorage.getItem('gridchain_wallet')); } catch { return null; }
 }
 function saveWallet(w) { localStorage.setItem('gridchain_wallet', JSON.stringify(w)); }
-function requireWallet() {
-  const w = loadWallet();
-  if (!w) { toast(t('walletFirst')); location.hash = '#/wallet'; return null; }
-  return w;
-}
 
 async function signWith(secretHex, msgBytes) {
   const algo = { name: 'Ed25519' };
@@ -407,19 +420,51 @@ async function signWith(secretHex, msgBytes) {
   return new Uint8Array(await crypto.subtle.sign(algo, key, msgBytes));
 }
 
+// ---------------------------------------------------------------- auth
+const AUTH = { token: localStorage.getItem('gridchain_token'), me: null };
+
+function currentAccount() {
+  const w = loadWallet();
+  if (w) return { address: w.address, local: true };
+  if (AUTH.me) return { address: AUTH.me.address, local: false, username: AUTH.me.username };
+  return null;
+}
+
+function requireWallet() {
+  const a = currentAccount();
+  if (!a) { toast(t('walletFirst')); location.hash = '#/wallet'; return null; }
+  return a;
+}
+
+async function apiAuth(path, body) {
+  return api(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + AUTH.token },
+    body: JSON.stringify(body || {}),
+  });
+}
+
 async function sendTx(type, params) {
-  const w = requireWallet();
-  if (!w) return null;
-  const acc = await api('/account/' + w.address);
-  const tx = { type, from: w.address, nonce: acc.nonce, params, pub: w.public };
-  const sig = await signWith(w.secret, utf8(canonical({ type, from: tx.from, nonce: tx.nonce, params })));
-  tx.sig = bytesToHex(sig);
-  await api('/tx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tx) });
+  const w = loadWallet();
+  let tx;
+  if (w) {
+    const acc = await api('/account/' + w.address);
+    tx = { type, from: w.address, nonce: acc.nonce, params, pub: w.public };
+    const sig = await signWith(w.secret, utf8(canonical({ type, from: tx.from, nonce: tx.nonce, params })));
+    tx.sig = bytesToHex(sig);
+    await api('/tx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tx) });
+  } else {
+    const a = currentAccount();
+    if (!a) { toast(t('walletFirst')); location.hash = '#/wallet'; return null; }
+    const r = await apiAuth('/relay', { type, params });
+    tx = r.tx;
+  }
   toast(t('queued'));
+  const from = tx.from;
   for (let i = 0; i < 10; i++) {
     await new Promise((r) => setTimeout(r, 1200));
-    const a = await api('/account/' + w.address);
-    if (a.nonce > tx.nonce) { toast(t('confirmed')); return tx; }
+    const acc2 = await api('/account/' + from);
+    if (acc2.nonce > tx.nonce) { toast(t('confirmed')); return tx; }
   }
   toast(t('stillPending'));
   return tx;
@@ -559,8 +604,8 @@ async function renderTrade(preselect) {
   const byVol = [...tokens].sort((a, b) => b.volume - a.volume);
   const id = preselect && tokens.find((x) => x.id === preselect) ? preselect : byVol[0].id;
   const tk = tokens.find((x) => x.id === id);
-  const w = loadWallet();
-  const acc = w ? await api('/account/' + w.address) : null;
+  const acct = currentAccount();
+  const acc = acct ? await api('/account/' + acct.address) : null;
   const held = acc ? (acc.tokens.find((x) => x.id === id) || { amount: 0 }).amount : 0;
 
   viewEl.innerHTML = `
@@ -628,8 +673,9 @@ async function renderTrade(preselect) {
 // ---------------------------------------------------------------- coin page
 async function renderCoin(id) {
   const tk = await api('/tokens/' + encodeURIComponent(id));
+  const acct = currentAccount();
   const w = loadWallet();
-  const acc = w ? await api('/account/' + w.address) : null;
+  const acc = acct ? await api('/account/' + acct.address) : null;
   const held = acc ? (acc.tokens.find((x) => x.id === tk.id) || { amount: 0 }).amount : 0;
   const creator = tk.creatorName ? `${esc(tk.creatorName)}` : short(tk.creator);
   const watch = watchlist();
@@ -697,7 +743,7 @@ async function renderCoin(id) {
         <span class="s"><span class="side-tag ${o.side}">${o.side === 'buy' ? t('buy') : t('sell')}</span>
           ${fmtNum(o.amount, 4)} @ <span class="mono">${fmtPrice(o.price)}</span>
           <span style="color:var(--dim)">· ${o.name ? esc(o.name) : short(o.from)}</span></span>
-        ${w && o.from === w.address ? `<button class="btn ghost cancel-btn" data-oid="${esc(o.id)}" style="width:auto;padding:4px 10px;font-size:10px">${t('cancel')}</button>` : ''}
+        ${acct && o.from === acct.address ? `<button class="btn ghost cancel-btn" data-oid="${esc(o.id)}" style="width:auto;padding:4px 10px;font-size:10px">${t('cancel')}</button>` : ''}
       </div>`).join('')}</div>` : ''}
     <div class="sec-title">${t('topHolders')}</div>
     <div class="holders" style="max-width:640px">${tk.holders.map((h) => `
@@ -717,7 +763,7 @@ async function renderCoin(id) {
           <div class="body">${esc(c.text)}</div>
         </div>`).join('') || `<div class="msg"><div class="body" style="color:var(--dim)">${t('noComments')}</div></div>`}
     </div>
-    ${w ? `
+    ${acct ? `
     <div class="chat-input" style="max-width:640px">
       <input id="cm-text" maxlength="200" placeholder="${esc(t('saySomething'))}">
       <button class="btn" id="cm-btn" style="width:auto;padding:10px 18px">${t('post')}</button>
@@ -909,18 +955,18 @@ function roundRect(ctx, x, y, w2, h2, r) {
 
 // ---------------------------------------------------------------- create
 async function renderCreate() {
-  const w = loadWallet();
-  const acc = w ? await api('/account/' + w.address) : null;
+  const acct = currentAccount();
+  const acc = acct ? await api('/account/' + acct.address) : null;
   viewEl.innerHTML = `
     <div class="narrow">
       <div class="sec-title">${t('launchCoin')}</div>
       <div class="panel">
-        ${!w ? `<p class="note" style="margin-bottom:14px">${t('needWallet')} — <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></p>` : ''}
+        ${!acct ? `<p class="note" style="margin-bottom:14px">${t('needWallet')} — <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></p>` : ''}
         <div class="field"><label>${t('ticker')}</label><input id="c-tick" class="mono" maxlength="8" placeholder="MOON"></div>
         <div class="field"><label>${t('name')}</label><input id="c-name" maxlength="40" placeholder="Moon Coin"></div>
         <div class="field"><label>${t('desc')}</label><textarea id="c-desc" maxlength="200" rows="3" placeholder="to the moon and back"></textarea></div>
         <div class="field"><label>${t('imageUrl')}</label><input id="c-img" maxlength="300" placeholder="https://…"></div>
-        <button class="btn" id="c-btn" ${w ? '' : 'disabled'}>${t('createBtn')}</button>
+        <button class="btn" id="c-btn" ${acct ? '' : 'disabled'}>${t('createBtn')}</button>
         <p class="note">${t('feeNote')}${acc ? ` · ${t('yourBalance')}: <b class="mono">${fmtNum(acc.grid)}</b> GRID` : ''}</p>
       </div>
     </div>`;
@@ -938,16 +984,29 @@ async function renderCreate() {
 // ---------------------------------------------------------------- wallet
 async function renderWallet() {
   const w = loadWallet();
-  if (!w) {
+  const acct = currentAccount();
+  if (!w && !acct) {
     viewEl.innerHTML = `
       <div class="narrow">
         <div class="sec-title">${t('walletTitle')}</div>
-        <div class="panel">
+        <div class="panel" style="margin-bottom:14px">
           <p class="note" style="margin-bottom:16px">${t('keysNote')}</p>
           <button class="btn" id="w-new">${t('createWallet')}</button>
           <div style="height:10px"></div>
           <button class="btn ghost" id="w-import">${t('importSecret')}</button>
           <p class="note" id="ed-note"></p>
+        </div>
+        <div class="panel">
+          <h3>${t('register')}</h3>
+          <p class="note" style="margin-bottom:14px">${t('authNote')}</p>
+          <div class="field"><label>${t('username')}</label><input id="r-user" maxlength="24" placeholder="satoshi_vibes"></div>
+          <div class="field"><label>${t('password')}</label><input id="r-pass" type="password" placeholder="••••••"></div>
+          <button class="btn" id="r-btn">${t('registerBtn')}</button>
+          <div style="height:14px"></div>
+          <h3>${t('login')}</h3>
+          <div class="field"><label>${t('username')}</label><input id="l-user" maxlength="24"></div>
+          <div class="field"><label>${t('password')}</label><input id="l-pass" type="password"></div>
+          <button class="btn ghost" id="l-btn">${t('loginBtn')}</button>
         </div>
       </div>`;
     $('#w-new').onclick = async () => {
@@ -971,10 +1030,37 @@ async function renderWallet() {
       } catch { toast(t('importFailed')); }
     };
     $('#ed-note').textContent = (window.crypto && crypto.subtle) ? '' : t('noWebcrypto');
+    $('#r-btn').onclick = async () => {
+      const username = $('#r-user').value.trim();
+      const password = $('#r-pass').value;
+      if (username.length < 3) return toast(t('userExists'));
+      if (password.length < 6) return toast(t('authFailed'));
+      try {
+        const r = await api('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+        AUTH.token = r.token;
+        AUTH.me = { username: r.username, address: r.address, public: r.public };
+        localStorage.setItem('gridchain_token', r.token);
+        toast(t('registerOk') + ' — ' + r.username);
+        renderWallet();
+      } catch (e) { toast(e.message === 'username already taken' ? t('userExists') : e.message); }
+    };
+    $('#l-btn').onclick = async () => {
+      const username = $('#l-user').value.trim();
+      const password = $('#l-pass').value;
+      try {
+        const r = await api('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+        AUTH.token = r.token;
+        AUTH.me = { username: r.username, address: r.address, public: r.public };
+        localStorage.setItem('gridchain_token', r.token);
+        toast('✓ ' + r.username);
+        renderWallet();
+      } catch { toast(t('authFailed')); }
+    };
     return;
   }
 
-  const acc = await api('/account/' + w.address);
+  const addr = acct.address;
+  const acc = await api('/account/' + addr);
   const prices = {};
   try {
     for (const tkn of await api('/tokens')) prices[tkn.id] = tkn.price;
@@ -998,9 +1084,14 @@ async function renderWallet() {
     <div class="narrow">
       <div class="sec-title">${t('walletTitle')}</div>
       <div class="addr-box"><div class="k">${t('address')}</div>
-        <span class="mono">${esc(w.address)}</span>
+        <span class="mono">${esc(addr)}</span>
         <button class="btn ghost" style="width:auto;padding:4px 12px;margin-top:10px;font-size:11px" id="w-copy">${t('copy')}</button>
       </div>
+      ${acct.username ? `
+      <div class="quick" style="display:flex;gap:10px;margin-bottom:14px;align-items:center">
+        <span class="tag">${t('accountWallet')}: <b>${esc(acct.username)}</b></span>
+        <button class="btn ghost" id="w-logout" style="width:auto;padding:6px 14px;font-size:11px">${t('logout')}</button>
+      </div>` : ''}
       <div class="bal-list">
         <div class="row"><span>GRID</span><b class="mono">${fmtNum(acc.grid, 4)}</b></div>
         ${acc.tokens.map((tk) => `<div class="row">
@@ -1029,7 +1120,16 @@ async function renderWallet() {
       </div>
       <p class="note">${t('faucetNote')}</p>
     </div>`;
-  $('#w-copy').onclick = () => copyText(w.address);
+  $('#w-copy').onclick = () => copyText(addr);
+  const lo = $('#w-logout');
+  if (lo) lo.onclick = async () => {
+    try { await apiAuth('/auth/logout', {}); } catch {}
+    AUTH.token = null;
+    AUTH.me = null;
+    localStorage.removeItem('gridchain_token');
+    toast('👋');
+    renderWallet();
+  };
 
   async function resolveRecipient(raw) {
     raw = raw.trim();
@@ -1061,23 +1161,28 @@ async function renderWallet() {
   };
   $('#w-faucet').onclick = async () => {
     try {
-      await api('/faucet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: w.address }) });
+      await api('/faucet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: addr }) });
       toast(t('queued'));
       for (let i = 0; i < 10; i++) {
         await new Promise((r) => setTimeout(r, 1200));
-        const a = await api('/account/' + w.address);
+        const a = await api('/account/' + addr);
         if (a.grid > 0) { toast(t('confirmed')); return renderWallet(); }
       }
       toast(t('stillPending'));
     } catch (e) { toast(e.message); }
   };
-  $('#w-show').onclick = () => {
-    const p = document.createElement('p');
-    p.className = 'note';
-    p.innerHTML = `<span class="secret mono">${esc(w.secret)}</span><br>${t('neverShare')}`;
-    p.style.marginTop = '12px';
-    $('#w-show').replaceWith(p);
-  };
+  const showBtn = $('#w-show');
+  if (showBtn && w) {
+    showBtn.onclick = () => {
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.innerHTML = `<span class="secret mono">${esc(w.secret)}</span><br>${t('neverShare')}`;
+      p.style.marginTop = '12px';
+      showBtn.replaceWith(p);
+    };
+  } else if (showBtn) {
+    showBtn.style.display = 'none';
+  }
 }
 
 // ---------------------------------------------------------------- profile
@@ -1240,7 +1345,7 @@ async function renderBuy() {
   const [cfg, dep] = await Promise.all([api('/config'), api('/deposits')]);
   const rate = Number(cfg.config && cfg.config.usdtRate) || 0;
   const w = loadWallet();
-  const my = w ? dep.deposits.filter((d) => d.address === w.address) : [];
+  const my = acct ? dep.deposits.filter((d) => d.address === acct.address) : [];
 
   viewEl.innerHTML = `
     <div class="narrow">
@@ -1314,15 +1419,15 @@ async function txMemo(tx) {
 // ---------------------------------------------------------------- admin panel
 async function renderAdmin() {
   const [cfg, accounts, dep] = await Promise.all([api('/config'), api('/accounts'), api('/deposits')]);
-  const w = loadWallet();
-  const isAdmin = w && cfg.admin === w.address;
+  const acct = currentAccount();
+  const isAdmin = acct && cfg.admin === acct.address;
 
   if (!cfg.admin) {
     viewEl.innerHTML = `
       <div class="narrow">
         <div class="sec-title">${t('adminPanel')}</div>
         <div class="panel">
-          ${w ? `<button class="btn" id="a-claim">${t('claimAdmin')}</button>
+          ${acct ? `<button class="btn" id="a-claim">${t('claimAdmin')}</button>
                  <p class="note">${t('claimAdminNote')}</p>`
              : `<div class="empty">${t('notAdmin')}</div>`}
         </div>
@@ -1447,6 +1552,15 @@ function applyLang() {
     updateMuteIcon();
     if (!MUTED) beep(880, 0.06);
   };
+  // restore an account session (login/password users without a local wallet)
+  if (AUTH.token && !loadWallet()) {
+    try {
+      AUTH.me = await api('/auth/me', { method: 'POST', headers: { Authorization: 'Bearer ' + AUTH.token } });
+    } catch {
+      AUTH.token = null;
+      localStorage.removeItem('gridchain_token');
+    }
+  }
   initStream();
   tick();
   setInterval(tick, 15000);
