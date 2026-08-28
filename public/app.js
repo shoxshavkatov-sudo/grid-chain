@@ -60,8 +60,7 @@ const I18N = {
     claimAdmin: 'CLAIM ROOT ADMIN', claimAdminNote: 'first wallet to claim becomes root admin — on-chain, forever',
     grantTitle: 'Grant GRID', grantAmount: 'amount per account', grantBtn: 'MINT TO SELECTED',
     noAccounts: 'no accounts yet', selected: 'selected',
-    settingsTitle: 'Settings', usdtRateLabel: 'GRID price in USDT', save: 'SAVE',
-    depositsTitle: 'Buy requests', approve: 'APPROVE', reject: 'REJECT',
+    settingsTitle: 'Settings', usdtRateLabel: 'GRID price in USDT', tonRateLabel: 'GRID price in TON', save: 'SAVE',    depositsTitle: 'Buy requests', approve: 'APPROVE', reject: 'REJECT',
     noDeposits: 'no requests yet', youAreAdmin: 'you are root admin', notAdmin: 'connect the admin wallet',
     login: 'Login', register: 'Create account', username: 'username', password: 'password',
     loginBtn: 'LOG IN', registerBtn: 'REGISTER', logout: 'LOG OUT',
@@ -134,7 +133,7 @@ const I18N = {
     claimAdmin: 'ЗАБРАТЬ ROOT-АДМИНА', claimAdminNote: 'первый, кто заберёт — становится root-админом, навсегда, на цепи',
     grantTitle: 'Выдать GRID', grantAmount: 'сумма на аккаунт', grantBtn: 'ВЫДАТЬ ВЫБРАННЫМ',
     noAccounts: 'аккаунтов пока нет', selected: 'выбрано',
-    settingsTitle: 'Настройки', usdtRateLabel: 'Цена GRID в USDT', save: 'СОХРАНИТЬ',
+    settingsTitle: 'Настройки', usdtRateLabel: 'Цена GRID в USDT', tonRateLabel: 'Цена GRID в TON', save: 'СОХРАНИТЬ',
     depositsTitle: 'Заявки на покупку', approve: 'ОДОБРИТЬ', reject: 'ОТКЛОНИТЬ',
     noDeposits: 'заявок пока нет', youAreAdmin: 'ты root-админ', notAdmin: 'подключи кошелёк админа',
     login: 'Вход', register: 'Регистрация', username: 'логин', password: 'пароль',
@@ -208,7 +207,7 @@ const I18N = {
     claimAdmin: 'ROOT-ADMIN OLISH', claimAdminNote: 'birinchi olgan wallet root-admin bo‘ladi — abadiy, zanjirda',
     grantTitle: 'GRID berish', grantAmount: 'har akkauntga summa', grantBtn: 'TANLANGANLARGA BERISH',
     noAccounts: 'akkauntlar yo‘q', selected: 'tanlangan',
-    settingsTitle: 'Sozlamalar', usdtRateLabel: 'GRID narxi USDTda', save: 'SAQLASH',
+    settingsTitle: 'Sozlamalar', usdtRateLabel: 'GRID narxi USDTda', tonRateLabel: 'GRID narxi TONda', save: 'SAQLASH',
     depositsTitle: 'Sotib olish so‘rovlari', approve: 'TASDIQLASH', reject: 'RAD ETISH',
     noDeposits: 'so‘rovlar yo‘q', youAreAdmin: 'sen root-adminsan', notAdmin: 'admin hamyonini ulang',
     login: 'Kirish', register: 'Ro‘yxatdan o‘tish', username: 'login', password: 'parol',
@@ -1099,6 +1098,9 @@ async function renderWallet() {
 
   const addr = acct.address;
   const acc = await api('/account/' + addr);
+  const cfg = await api('/config');
+  const usdtEq = acc.grid * (Number(cfg.config && cfg.config.usdtRate) || 0);
+  const tonEq = acc.grid * (Number(cfg.config && cfg.config.tonRate) || 0);
   const prices = {};
   try {
     for (const tkn of await api('/tokens')) prices[tkn.id] = tkn.price;
@@ -1120,21 +1122,27 @@ async function renderWallet() {
   }).join('');
   viewEl.innerHTML = `
     <div class="narrow">
-      <div class="sec-title">${t('walletTitle')}</div>
-      <div class="addr-box"><div class="k">${t('address')}</div>
-        <span class="mono">${esc(addr)}</span>
-        <button class="btn ghost" style="width:auto;padding:4px 12px;margin-top:10px;font-size:11px" id="w-copy">${t('copy')}</button>
+      <div class="pay-card">
+        <div class="pc-top">
+          <span class="pc-brand"><span class="mini-grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>GRID</span>
+          <span class="pc-mode">${acct.username ? '@' + esc(acct.username) : esc(t('localWallet'))}</span>
+        </div>
+        <div class="pc-bal mono">${fmtNum(acc.grid, 4)}</div>
+        <div class="pc-unit">GRID</div>
+        ${(usdtEq > 0 || tonEq > 0) ? `
+        <div class="pc-equiv">
+          ${usdtEq > 0 ? `<span>≈ <b class="mono">${fmtNum(usdtEq, 2)}</b> USDT</span>` : ''}
+          ${tonEq > 0 ? `<span>≈ <b class="mono">${fmtNum(tonEq, 3)}</b> TON</span>` : ''}
+        </div>` : ''}
+        <div class="pc-bottom">
+          <button class="pc-addr mono" id="pc-copy" title="${t('copy')}">${short(addr)} ⧉</button>
+          <span class="pc-net"><span class="live-dot"></span>GRID CHAIN</span>
+        </div>
       </div>
-      ${acct.username ? `
-      <div class="quick" style="display:flex;gap:10px;margin-bottom:14px;align-items:center">
-        <span class="tag">${t('accountWallet')}: <b>${esc(acct.username)}</b></span>
-      </div>` : w ? `<p class="note" style="margin-bottom:12px">${t('localWallet')}</p>` : ''}
-      <div class="bal-list">
-        <div class="row"><span>GRID</span><b class="mono">${fmtNum(acc.grid, 4)}</b></div>
-        ${acc.tokens.map((tk) => `<div class="row">
-          <span><a href="#/coin/${esc(tk.id)}" style="color:var(--fg)" class="mono">$${esc(tk.ticker || tk.id)}</a></span>
-          <b class="mono">${fmtNum(tk.amount)}</b></div>`).join('')}
-      </div>
+      ${acc.tokens.length ? `
+      <div class="chip-row">
+        ${acc.tokens.map((tk) => `<a class="chip" href="#/coin/${esc(tk.id)}"><b class="mono">$${esc(tk.ticker || tk.id)}</b><span class="mono">${fmtNum(tk.amount, 0)}</span></a>`).join('')}
+      </div>` : ''}
       ${posRows ? `
       <div class="sec-title">${t('positions')}</div>
       <div class="bal-list" id="pnl-list">${posRows}</div>` : ''}
@@ -1170,7 +1178,7 @@ async function renderWallet() {
           : authFormsHtml()}
       </div>
     </div>`;
-  $('#w-copy').onclick = () => copyText(addr);
+  $('#pc-copy').onclick = () => copyText(addr);
   const lo = $('#w-logout');
   if (lo) lo.onclick = async () => {
     try { await apiAuth('/auth/logout', {}); } catch {}
@@ -1515,6 +1523,7 @@ async function renderAdmin() {
       <div class="panel" style="margin-bottom:14px">
         <h3>${t('settingsTitle')}</h3>
         <div class="field"><label>${t('usdtRateLabel')}</label><input id="a-rate" type="number" step="any" min="0" placeholder="0.01" value="${cfg.config.usdtRate || ''}"></div>
+        <div class="field"><label>${t('tonRateLabel')}</label><input id="a-ton" type="number" step="any" min="0" placeholder="0.003" value="${cfg.config.tonRate || ''}"></div>
         ${CURRENCIES.map((cc) => `
         <div class="field"><label>${cc.label}</label><input class="dep-addr mono" data-key="dep_${cc.id}" placeholder="${cc.id} address" value="${esc(cfg.config['dep_' + cc.id] || '')}"></div>`).join('')}
         <button class="btn ghost" id="a-save">${t('save')}</button>
@@ -1555,6 +1564,8 @@ async function renderAdmin() {
     $('#a-save').onclick = async () => {
       const rate = Number($('#a-rate').value);
       if (rate > 0) await sendTx('SET_CONFIG', { key: 'usdtRate', value: String(rate) });
+      const ton = Number($('#a-ton').value);
+      if (ton > 0) await sendTx('SET_CONFIG', { key: 'tonRate', value: String(ton) });
       for (const inp of viewEl.querySelectorAll('.dep-addr')) {
         if (inp.value.trim()) await sendTx('SET_CONFIG', { key: inp.dataset.key, value: inp.value.trim() });
       }

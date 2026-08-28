@@ -267,6 +267,10 @@ test('buy flow: rate config, deposit request, approve mints, reject burns nothin
   assert.throws(() => c.applyTx(makeTx(bob, c.state, 'REQUEST_BUY', { currency: 'USDT_TRC20', usdtAmount: 10 }), {}),
     (e) => e.code === 'no_rate');
   c.applyTx(makeTx(alice, c.state, 'SET_CONFIG', { key: 'usdtRate', value: '0.01' }), { height: 1, time: 2 });
+  assert.equal(c.state.config.usdtRate, 0.01);
+  c.applyTx(makeTx(alice, c.state, 'SET_CONFIG', { key: 'tonRate', value: '0.003' }), { height: 1, time: 2 });
+  assert.equal(c.state.config.tonRate, 0.003);
+  assert.throws(() => c.applyTx(makeTx(alice, c.state, 'SET_CONFIG', { key: 'evil_key', value: '1' }), {}), (e) => e.code === 'bad_key');
   // no deposit address yet → rejected
   assert.throws(() => c.applyTx(makeTx(bob, c.state, 'REQUEST_BUY', { currency: 'USDT_TRC20', usdtAmount: 10 }), {}),
     (e) => e.code === 'no_address');

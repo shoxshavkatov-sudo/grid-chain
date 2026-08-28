@@ -292,6 +292,67 @@ button.icon-btn.star{position:static;font-size:15px}
 .tag.st-approved{color:var(--up);border-color:color-mix(in srgb,var(--up) 40%,transparent)}
 .tag.st-rejected{color:#ff5252;border-color:rgba(255,82,82,.4)}
 
+/* CRYPTO CARD WALLET */
+.pay-card{
+  position:relative;overflow:hidden;
+  border-radius:22px;padding:22px 20px 18px;margin-bottom:14px;
+  background:
+    radial-gradient(120% 150% at 85% -20%,rgba(255,255,255,.14),transparent 55%),
+    radial-gradient(80% 120% at -10% 110%,rgba(120,120,255,.10),transparent 50%),
+    linear-gradient(135deg,#17171a 0%,#0b0b0d 60%,#101014 100%);
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 18px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.16);
+  color:#f5f5f5;
+}
+html[data-theme="light"] .pay-card{
+  background:
+    radial-gradient(120% 150% at 85% -20%,rgba(255,255,255,.9),transparent 55%),
+    radial-gradient(80% 120% at -10% 110%,rgba(90,90,200,.10),transparent 50%),
+    linear-gradient(135deg,#23232a 0%,#101014 60%,#1a1a20 100%);
+}
+.pay-card::before{ /* slow holographic sheen */
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.09) 46%,rgba(160,200,255,.06) 52%,transparent 68%);
+  background-size:220% 100%;
+  animation:pc-sheen 8s ease-in-out infinite;
+}
+@keyframes pc-sheen{0%,100%{background-position:130% 0}55%{background-position:-30% 0}}
+.pay-card::after{ /* faint grid motif */
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;opacity:.5;
+  background-image:
+    linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:34px 34px;
+  -webkit-mask-image:radial-gradient(90% 120% at 80% 0%,#000 20%,transparent 70%);
+  mask-image:radial-gradient(90% 120% at 80% 0%,#000 20%,transparent 70%);
+}
+.pc-top{display:flex;justify-content:space-between;align-items:center;gap:10px;position:relative;z-index:1}
+.pc-brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.22em;font-size:13px}
+.pc-mode{font-size:10px;letter-spacing:.1em;color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;padding:3px 10px;text-transform:uppercase}
+.pc-bal{position:relative;z-index:1;font-size:38px;font-weight:800;letter-spacing:.02em;margin-top:18px;line-height:1.1;
+  font-variant-numeric:tabular-nums;text-shadow:0 2px 18px rgba(255,255,255,.15)}
+.pc-unit{position:relative;z-index:1;font-size:11px;letter-spacing:.34em;color:rgba(255,255,255,.5);margin-top:2px}
+.pc-equiv{position:relative;z-index:1;display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:rgba(255,255,255,.6)}
+.pc-equiv b{color:#fff;font-weight:600}
+.pc-bottom{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px}
+.pc-addr{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.85);
+  font:inherit;font-size:11.5px;padding:6px 12px;border-radius:10px;cursor:pointer;transition:.15s;
+}
+.pc-addr:hover{background:rgba(255,255,255,.16);color:#fff}
+.pc-net{display:flex;align-items:center;font-size:9px;letter-spacing:.26em;color:rgba(255,255,255,.45);font-weight:700}
+.pay-card .live-dot{background:#2fd97f}
+.chip-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;scrollbar-width:none}
+.chip-row::-webkit-scrollbar{display:none}
+.chip{
+  display:flex;flex-direction:column;gap:2px;flex-shrink:0;
+  border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;transition:.15s;
+}
+.chip:hover{border-color:var(--dim)}
+.chip b{font-size:12px}
+.chip span{font-size:10px;color:var(--dim)}
+
 /* TOAST */
 .toast{
   position:fixed;left:50%;bottom:104px;transform:translateX(-50%) translateY(16px);

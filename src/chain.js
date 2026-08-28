@@ -267,6 +267,7 @@ export class Chain {
         if (!s.config) s.config = {};
         const ALLOWED = {
           usdtRate: (v) => { const n = Number(v); if (!(n > 0) || n > 1000) return null; return n; },
+          tonRate: (v) => { const n = Number(v); if (!(n > 0) || n > 1000) return null; return n; },
           dep_USDT_TRC20: (v) => String(v).slice(0, 120),
           dep_TON: (v) => String(v).slice(0, 120),
           dep_BTC: (v) => String(v).slice(0, 120),
