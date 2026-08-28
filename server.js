@@ -678,12 +678,15 @@ function serveStatic(req, res, url) {
       if (path.extname(filePath)) { res.writeHead(404); return res.end('not found'); }
       fs.readFile(path.join(__dirname, 'public', 'index.html'), (e2, index) => {
         if (e2) { res.writeHead(404); return res.end('not found'); }
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
         res.end(index);
       });
       return;
     }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(abs)] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'Content-Type': MIME[path.extname(abs)] || 'application/octet-stream',
+      'Cache-Control': 'no-cache',
+    });
     res.end(data);
   });
 }
