@@ -248,3 +248,46 @@ test('cancel order refunds the escrow', () => {
   assert.equal(c.state.tokens.CNC.orders.length, 0);
   assert.ok(c.state.accounts[alice.address].grid === before, 'escrow refunded');
 });
+
+test('admin lifecycle: claim once, mint is admin-only', () => {
+  const c = freshChain();
+  c.applyTx(makeTx(alice, c.state, 'CLAIM_ADMIN', {}), { height: 1, time: 1 });
+  assert.equal(c.state.admin, alice.address);
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'CLAIM_ADMIN', {}), {}), (e) => e.code === 'admin_exists');
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'MINT', { to: bob.address, amount: 100 }), {}), (e) => e.code === 'not_admin');
+  const bobBefore = (c.state.accounts[bob.address] || { grid: 0 }).grid;
+  c.applyTx(makeTx(alice, c.state, 'MINT', { to: bob.address, amount: 1234.5 }), { height: 1, time: 2 });
+  assert.equal(c.state.accounts[bob.address].grid, bobBefore + 1234.5);
+});
+
+test('buy flow: rate config, deposit request, approve mints, reject burns nothing', () => {
+  const c = freshChain();
+  c.applyTx(makeTx(alice, c.state, 'CLAIM_ADMIN', {}), { height: 1, time: 1 });
+  // no rate yet → requests rejected
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'REQUEST_BUY', { currency: 'USDT_TRC20', usdtAmount: 10 }), {}),
+    (e) => e.code === 'no_rate');
+  c.applyTx(makeTx(alice, c.state, 'SET_CONFIG', { key: 'usdtRate', value: '0.01' }), { height: 1, time: 2 });
+  // no deposit address yet → rejected
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'REQUEST_BUY', { currency: 'USDT_TRC20', usdtAmount: 10 }), {}),
+    (e) => e.code === 'no_address');
+  c.applyTx(makeTx(alice, c.state, 'SET_CONFIG', { key: 'dep_USDT_TRC20', value: 'TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' }), { height: 1, time: 3 });
+
+  c.applyTx(makeTx(bob, c.state, 'REQUEST_BUY', { currency: 'USDT_TRC20', usdtAmount: 25 }), { height: 1, time: 4 });
+  assert.equal(c.state.deposits.length, 1);
+  const d = c.state.deposits[0];
+  assert.equal(d.grid, 2500); // 25 / 0.01
+  assert.ok(d.memo.length === 8);
+  assert.equal(d.status, 'pending');
+
+  const bobBefore = (c.state.accounts[bob.address] || { grid: 0 }).grid;
+  c.applyTx(makeTx(alice, c.state, 'APPROVE_DEPOSIT', { id: d.id }), { height: 1, time: 5 });
+  assert.equal(d.status, 'approved');
+  assert.equal(c.state.accounts[bob.address].grid, bobBefore + 2500);
+  assert.throws(() => c.applyTx(makeTx(alice, c.state, 'APPROVE_DEPOSIT', { id: d.id }), {}), (e) => e.code === 'bad_state');
+
+  c.applyTx(makeTx(bob, c.state, 'REQUEST_BUY', { currency: 'USDT_TRC20', usdtAmount: 5 }), { height: 1, time: 6 });
+  const d2 = c.state.deposits[0];
+  c.applyTx(makeTx(alice, c.state, 'APPROVE_DEPOSIT', { id: d2.id, reject: true }), { height: 1, time: 7 });
+  assert.equal(d2.status, 'rejected');
+  assert.equal(c.state.accounts[bob.address].grid, bobBefore + 2500, 'rejected deposit must not mint');
+});

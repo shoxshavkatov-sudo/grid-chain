@@ -67,7 +67,12 @@ export class Chain {
   constructor() {
     this.blocks = [];
     this.recentTxs = []; // flattened, newest first, capped — API convenience only
-    this.state = { accounts: {}, tokens: {}, profiles: {} };
+    this.state = {
+      accounts: {}, tokens: {}, profiles: {},
+      admin: null,
+      config: { usdtRate: 0, dep_USDT_TRC20: '', dep_TON: '', dep_BTC: '' },
+      deposits: [],
+    };
   }
 
   static genesis(faucetAddress) {
@@ -243,6 +248,66 @@ export class Chain {
         tk.orders.splice(idx, 1);
         break;
       }
+      case 'CLAIM_ADMIN': {
+        if (s.admin) throw new ChainError('admin_exists', 'admin already claimed');
+        s.admin = from;
+        break;
+      }
+      case 'MINT': {
+        if (s.admin !== from) throw new ChainError('not_admin', 'admin only');
+        const amount = r4(Number(p.amount));
+        if (!(amount > 0)) throw new ChainError('bad_amount', 'amount must be positive');
+        if (amount > 10_000_000) throw new ChainError('too_much', 'max 10,000,000 GRID per mint');
+        if (!p.to || typeof p.to !== 'string') throw new ChainError('bad_to', 'missing recipient');
+        Chain.ensureAccount(s, p.to).grid = r4(Chain.ensureAccount(s, p.to).grid + amount);
+        break;
+      }
+      case 'SET_CONFIG': {
+        if (s.admin !== from) throw new ChainError('not_admin', 'admin only');
+        if (!s.config) s.config = {};
+        const ALLOWED = {
+          usdtRate: (v) => { const n = Number(v); if (!(n > 0) || n > 1000) return null; return n; },
+          dep_USDT_TRC20: (v) => String(v).slice(0, 120),
+          dep_TON: (v) => String(v).slice(0, 120),
+          dep_BTC: (v) => String(v).slice(0, 120),
+        };
+        const fn = ALLOWED[String(p.key)];
+        if (!fn) throw new ChainError('bad_key', 'unknown config key');
+        const val = fn(p.value);
+        if (val === null || val === undefined || val === '') throw new ChainError('bad_value', 'invalid value');
+        s.config[p.key] = val;
+        break;
+      }
+      case 'REQUEST_BUY': {
+        const rate = Number(s.config && s.config.usdtRate);
+        if (!(rate > 0)) throw new ChainError('no_rate', 'GRID/USDT rate is not set yet');
+        const currency = ['USDT_TRC20', 'TON', 'BTC'].includes(p.currency) ? p.currency : null;
+        if (!currency) throw new ChainError('bad_currency', 'currency must be USDT_TRC20, TON or BTC');
+        if (!(s.config && s.config['dep_' + currency])) throw new ChainError('no_address', `no deposit address for ${currency}`);
+        const usdt = r4(Number(p.usdtAmount));
+        if (!(usdt >= 1) || usdt > 100000) throw new ChainError('bad_amount', 'amount must be 1-100000 USDT');
+        const grid = r4(usdt / rate);
+        const id = txHash(tx);
+        if (!Array.isArray(s.deposits)) s.deposits = [];
+        s.deposits.unshift({
+          id, from, currency, usdt, grid,
+          memo: id.slice(0, 8).toUpperCase(),
+          status: 'pending', time: blockMeta ? blockMeta.time : Date.now(),
+        });
+        if (s.deposits.length > 200) s.deposits.length = 200;
+        break;
+      }
+      case 'APPROVE_DEPOSIT': {
+        if (s.admin !== from) throw new ChainError('not_admin', 'admin only');
+        const d = (s.deposits || []).find((x) => x.id === String(p.id));
+        if (!d) throw new ChainError('no_deposit', 'deposit not found');
+        if (d.status !== 'pending') throw new ChainError('bad_state', 'deposit already processed');
+        d.status = p.reject ? 'rejected' : 'approved';
+        if (!p.reject) {
+          Chain.ensureAccount(s, d.from).grid = r4(Chain.ensureAccount(s, d.from).grid + d.grid);
+        }
+        break;
+      }
       default:
         throw new ChainError('bad_type', `unknown tx type ${tx.type}`);
     }
@@ -402,6 +467,11 @@ function describeTx(tx, state) {
     case 'COMMENT': return `💬 $${String(p.token).toUpperCase()}: ${String(p.text).slice(0, 40)}`;
     case 'ORDER': return `limit ${p.side} ${p.amount} $${String(p.token).toUpperCase()} @ ${p.price}`;
     case 'CANCEL_ORDER': return `cancelled order ${String(p.id).slice(0, 10)}…`;
+    case 'CLAIM_ADMIN': return '⚡ claimed root admin';
+    case 'MINT': return `minted ${p.amount} GRID → ${String(p.to).slice(0, 10)}…`;
+    case 'SET_CONFIG': return `set ${p.key}`;
+    case 'REQUEST_BUY': return `buy request: ${p.usdtAmount} ${p.currency} → GRID`;
+    case 'APPROVE_DEPOSIT': return `${p.reject ? 'rejected' : 'approved'} deposit ${String(p.id).slice(0, 8)}…`;
     case 'BUY': {
       const t = state.tokens[String(p.token || '').toUpperCase()];
       const price = t ? (t.x / t.y).toPrecision(4) : '?';

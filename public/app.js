@@ -49,6 +49,20 @@ const I18N = {
     ach_chatter: 'voice of the grid', ach_loud: 'loudmouth', ach_whale: 'whale',
     ach_graduator: 'graduator', ach_collector: 'collector',
     achievements: 'Achievements',
+    nativeCoin: 'Native coin', buyGrid: 'BUY GRID', buyTitle: 'Buy GRID',
+    supply: 'Supply', inCirculation: 'In circulation', rate: 'Rate',
+    rateNotSet: 'rate not set yet — admin sets the GRID/USDT price',
+    chooseCurrency: 'Currency', payAmount: 'Amount, USDT', youGet: 'You get',
+    createRequest: 'CREATE BUY REQUEST', memoLabel: 'MEMO / comment — REQUIRED',
+    sendExactly: `Send the amount to the address below with the memo, then wait for admin confirmation.`,
+    myRequests: 'My requests', pending: 'pending', approved: 'approved', rejected: 'rejected',
+    depositAddress: 'Deposit address', admin: 'Admin', adminPanel: 'Admin panel',
+    claimAdmin: 'CLAIM ROOT ADMIN', claimAdminNote: 'first wallet to claim becomes root admin — on-chain, forever',
+    grantTitle: 'Grant GRID', grantAmount: 'amount per account', grantBtn: 'MINT TO SELECTED',
+    noAccounts: 'no accounts yet', selected: 'selected',
+    settingsTitle: 'Settings', usdtRateLabel: 'GRID price in USDT', save: 'SAVE',
+    depositsTitle: 'Buy requests', approve: 'APPROVE', reject: 'REJECT',
+    noDeposits: 'no requests yet', youAreAdmin: 'you are root admin', notAdmin: 'connect the admin wallet',
     copy: 'copy', copied: 'copied',
     queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
@@ -102,6 +116,20 @@ const I18N = {
     ach_chatter: 'голос сетки', ach_loud: 'громкоговоритель', ach_whale: 'кит',
     ach_graduator: 'градуатор', ach_collector: 'коллекционер',
     achievements: 'Ачивки',
+    nativeCoin: 'Основная монета', buyGrid: 'КУПИТЬ GRID', buyTitle: 'Покупка GRID',
+    supply: 'Саплай', inCirculation: 'В обращении', rate: 'Курс',
+    rateNotSet: 'курс ещё не установлен — админ задаст цену GRID/USDT',
+    chooseCurrency: 'Валюта', payAmount: 'Сумма, USDT', youGet: 'Получишь',
+    createRequest: 'СОЗДАТЬ ЗАЯВКУ', memoLabel: 'МЕМО / комментарий — ОБЯЗАТЕЛЬНО',
+    sendExactly: 'Отправь сумму на адрес ниже с указанием мемо, затем дождись подтверждения админа.',
+    myRequests: 'Мои заявки', pending: 'в обработке', approved: 'выполнена', rejected: 'отклонена',
+    depositAddress: 'Адрес для депозита', admin: 'Админ', adminPanel: 'Админ-панель',
+    claimAdmin: 'ЗАБРАТЬ ROOT-АДМИНА', claimAdminNote: 'первый, кто заберёт — становится root-админом, навсегда, на цепи',
+    grantTitle: 'Выдать GRID', grantAmount: 'сумма на аккаунт', grantBtn: 'ВЫДАТЬ ВЫБРАННЫМ',
+    noAccounts: 'аккаунтов пока нет', selected: 'выбрано',
+    settingsTitle: 'Настройки', usdtRateLabel: 'Цена GRID в USDT', save: 'СОХРАНИТЬ',
+    depositsTitle: 'Заявки на покупку', approve: 'ОДОБРИТЬ', reject: 'ОТКЛОНИТЬ',
+    noDeposits: 'заявок пока нет', youAreAdmin: 'ты root-админ', notAdmin: 'подключи кошелёк админа',
     copy: 'копировать', copied: 'скопировано',
     queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
@@ -155,6 +183,20 @@ const I18N = {
     ach_chatter: 'grid ovozi', ach_loud: 'baland ovozli', ach_whale: 'kit',
     ach_graduator: 'graduator', ach_collector: 'kollektor',
     achievements: 'Yutuqlar',
+    nativeCoin: 'Asosiy tanga', buyGrid: 'GRID OLISH', buyTitle: 'GRID sotib olish',
+    supply: 'Supply', inCirculation: 'Muomalada', rate: 'Kurs',
+    rateNotSet: 'kurs hali o‘rnatilmagan — admin GRID/USDT narxini belgilaydi',
+    chooseCurrency: 'Valyuta', payAmount: 'Summa, USDT', youGet: 'Olasiz',
+    createRequest: 'SO‘ROV YARATISH', memoLabel: 'MEMO / izoh — MAJBURIY',
+    sendExactly: 'Summani quyidagi manzilga memo bilan yuboring, so‘ng admin tasdig‘ini kuting.',
+    myRequests: 'Mening so‘rovlarim', pending: 'kutilmoqda', approved: 'bajarildi', rejected: 'rad etildi',
+    depositAddress: 'Depozit manzili', admin: 'Admin', adminPanel: 'Admin panel',
+    claimAdmin: 'ROOT-ADMIN OLISH', claimAdminNote: 'birinchi olgan wallet root-admin bo‘ladi — abadiy, zanjirda',
+    grantTitle: 'GRID berish', grantAmount: 'har akkauntga summa', grantBtn: 'TANLANGANLARGA BERISH',
+    noAccounts: 'akkauntlar yo‘q', selected: 'tanlangan',
+    settingsTitle: 'Sozlamalar', usdtRateLabel: 'GRID narxi USDTda', save: 'SAQLASH',
+    depositsTitle: 'Sotib olish so‘rovlari', approve: 'TASDIQLASH', reject: 'RAD ETISH',
+    noDeposits: 'so‘rovlar yo‘q', youAreAdmin: 'sen root-adminsan', notAdmin: 'admin hamyonini ulang',
     copy: 'nusxalash', copied: 'nusxalandi',
     queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
@@ -407,6 +449,8 @@ async function route() {
     if (page === 'wallet') return await renderWallet();
     if (page === 'profile') return await renderProfile(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'explorer') return await renderExplorer(parts[1] ? decodeURIComponent(parts[1]) : null);
+    if (page === 'buy') return await renderBuy();
+    if (page === 'admin') return await renderAdmin();
     if (page === 'coin' && parts[1]) return await renderCoin(decodeURIComponent(parts[1]));
     location.hash = '#/';
   } catch (e) {
@@ -426,10 +470,11 @@ window.addEventListener('hashchange', route);
 
 // ---------------------------------------------------------------- home
 async function renderHome() {
-  const [stats, tokens, txs, lb] = await Promise.all([
-    api('/stats'), api('/tokens'), api('/txs?limit=14'), api('/leaderboard'),
+  const [stats, tokens, txs, lb, cfg] = await Promise.all([
+    api('/stats'), api('/tokens'), api('/txs?limit=14'), api('/leaderboard'), api('/config'),
   ]);
   const watch = watchlist();
+  const rate = Number(cfg.config && cfg.config.usdtRate) || 0;
   const cellCard = (tk, starred) => `
     <a class="cell-card" href="#/coin/${esc(tk.id)}">
       ${tk.graduated ? '<span class="grad-flag">GRADUATED</span>' : ''}
@@ -457,6 +502,18 @@ async function renderHome() {
       <div class="stat"><div class="k">${t('coinsN')}</div><div class="v mono">${stats.tokens}</div></div>
       <div class="stat"><div class="k">${t('accounts')}</div><div class="v mono">${stats.accounts}</div></div>
       <div class="stat"><div class="k">${t('volume')}</div><div class="v mono">${fmtNum(stats.volume, 0)}</div></div>
+    </div>
+    <div class="grid-hero">
+      <div class="gh-left">
+        <div class="gh-tag">${t('nativeCoin')}</div>
+        <div class="gh-tick mono">GRID</div>
+        <div class="gh-rows">
+          <div class="row"><span>${t('supply')}</span><b class="mono">100,000,000</b></div>
+          <div class="row"><span>${t('inCirculation')}</span><b class="mono">${fmtNum(stats.gridSupply, 0)}</b></div>
+          <div class="row"><span>${t('rate')}</span><b class="mono">${rate > 0 ? '1 GRID = ' + rate + ' USDT' : '—'}</b></div>
+        </div>
+      </div>
+      <a class="btn" href="#/buy" style="width:auto;align-self:center;text-decoration:none;display:inline-block">${t('buyGrid')}</a>
     </div>
     ${favCells ? `
     <div class="sec-title">${t('favorites')}</div>
@@ -1032,8 +1089,9 @@ async function renderProfile(address) {
       <div class="empty">${t('needWallet')} — <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></div></div>`;
     return;
   }
-  const [prof, acc] = await Promise.all([api('/profile/' + addr), api('/account/' + addr)]);
+  const [prof, acc, cfg] = await Promise.all([api('/profile/' + addr), api('/account/' + addr), api('/config')]);
   const isOwn = own && own.address === addr;
+  const isAdmin = cfg.admin === addr;
   const initial = (prof.name || '?').slice(0, 1).toUpperCase();
 
   viewEl.innerHTML = `
@@ -1041,7 +1099,7 @@ async function renderProfile(address) {
       <div class="sec-title">${t('profile')}</div>
       <div class="avatar">${esc(prof.name ? initial : 'Ø')}</div>
       <div class="addr-box" style="margin-bottom:8px">
-        <div class="k">${esc(prof.name || t('unnamed'))} ${isOwn ? '<span class="tag">YOU</span>' : ''}</div>
+        <div class="k">${esc(prof.name || t('unnamed'))} ${isOwn ? '<span class="tag">YOU</span>' : ''} ${isAdmin ? '<a href="#/admin" style="color:var(--up)">⚡ ' + esc(t('admin')) + '</a>' : ''}</div>
         <span class="mono" style="color:var(--dim)">${esc(addr)}</span>
         <button class="btn ghost" style="width:auto;padding:4px 12px;margin-top:10px;font-size:11px" id="p-copy">${t('copy')}</button>
       </div>
@@ -1164,7 +1222,191 @@ function describeTxLocal(tx) {
     case 'ORDER': return `limit ${p.side} ${p.amount} $${p.token} @ ${p.price}`;
     case 'CANCEL_ORDER': return `cancel order`;
     case 'TOKEN_TRANSFER': return `sent ${p.amount} $${p.token}`;
+    case 'MINT': return `minted ${p.amount} GRID`;
+    case 'REQUEST_BUY': return `buy request ${p.usdtAmount} ${p.currency}`;
+    case 'APPROVE_DEPOSIT': return `${p.reject ? 'rejected' : 'approved'} deposit`;
     default: return tx.type;
+  }
+}
+
+// ---------------------------------------------------------------- buy GRID
+const CURRENCIES = [
+  { id: 'USDT_TRC20', label: 'USDT · TRC-20' },
+  { id: 'TON', label: 'TON' },
+  { id: 'BTC', label: 'BTC' },
+];
+
+async function renderBuy() {
+  const [cfg, dep] = await Promise.all([api('/config'), api('/deposits')]);
+  const rate = Number(cfg.config && cfg.config.usdtRate) || 0;
+  const w = loadWallet();
+  const my = w ? dep.deposits.filter((d) => d.address === w.address) : [];
+
+  viewEl.innerHTML = `
+    <div class="narrow">
+      <div class="sec-title">${t('buyTitle')}</div>
+      <div class="panel">
+        ${rate > 0 ? `
+        <div class="field"><label>${t('chooseCurrency')}</label>
+          <select id="b-cur">${CURRENCIES.map((cc) =>
+            `<option value="${cc.id}" ${cfg.config['dep_' + cc.id] ? '' : 'disabled'}>${cc.label}${cfg.config['dep_' + cc.id] ? '' : ' — ' + t('notFound')}</option>`).join('')}</select></div>
+        <div class="field"><label>${t('payAmount')}</label><input id="b-amt" type="number" min="1" placeholder="10"></div>
+        <div class="field"><label>${t('youGet')}</label><input id="b-get" class="mono" disabled value="0 GRID"></div>
+        <button class="btn" id="b-btn">${t('createRequest')}</button>
+        <p class="note">${t('sendExactly')}</p>` : `
+        <div class="empty">${t('rateNotSet')}</div>`}
+      </div>
+      <div id="b-result" style="margin-top:14px"></div>
+      ${my.length ? `
+      <div class="sec-title">${t('myRequests')}</div>
+      <div class="feed">${my.map((d) => `
+        <div class="row">
+          <span class="s">${fmtNum(d.usdt, 2)} ${d.currency} → <b class="mono">${fmtNum(d.grid, 0)} GRID</b>
+            <span class="tag st-${d.status}">${t(d.status)}</span></span>
+          <span class="m">${ago(d.time)}</span>
+        </div>`).join('')}</div>` : ''}
+    </div>`;
+
+  if (rate > 0) {
+    const upd = () => {
+      const usdt = Number($('#b-amt').value) || 0;
+      $('#b-get').value = fmtNum(Math.floor(usdt / rate), 0) + ' GRID';
+    };
+    $('#b-amt').addEventListener('input', upd);
+    $('#b-btn').onclick = async () => {
+      const w2 = requireWallet();
+      if (!w2) return;
+      const usdt = Number($('#b-amt').value);
+      if (!(usdt >= 1)) return toast(t('enterAmount'));
+      const cur = $('#b-cur').value;
+      const tx = await sendTx('REQUEST_BUY', { currency: cur, usdtAmount: usdt });
+      if (tx) {
+        const memo = await txMemo(tx);
+        const ccfg = cfg.config;
+        $('#b-result').innerHTML = `
+          <div class="panel">
+            <h3>${t('depositAddress')} · ${cur}</h3>
+            <div class="addr-box" style="margin-bottom:10px"><div class="k">${cur}</div>
+              <span class="mono">${esc(ccfg['dep_' + cur])}</span></div>
+            <div class="addr-box" style="margin-bottom:0"><div class="k">${t('memoLabel')}</div>
+              <span class="mono" style="color:var(--up);font-weight:700">${esc(memo)}</span></div>
+            <p class="note">${t('sendExactly')}</p>
+          </div>`;
+      }
+    };
+  }
+}
+
+// memo = first 8 hex chars of the tx hash, computed client-side (SHA-256 of canonical signed tx)
+async function txMemo(tx) {
+  try {
+    const bytes = utf8(canonical({
+      type: tx.type, from: tx.from, nonce: tx.nonce, params: tx.params, sig: tx.sig,
+    }));
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(digest)].slice(0, 4)
+      .map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  } catch {
+    return '—';
+  }
+}
+
+// ---------------------------------------------------------------- admin panel
+async function renderAdmin() {
+  const [cfg, accounts, dep] = await Promise.all([api('/config'), api('/accounts'), api('/deposits')]);
+  const w = loadWallet();
+  const isAdmin = w && cfg.admin === w.address;
+
+  if (!cfg.admin) {
+    viewEl.innerHTML = `
+      <div class="narrow">
+        <div class="sec-title">${t('adminPanel')}</div>
+        <div class="panel">
+          ${w ? `<button class="btn" id="a-claim">${t('claimAdmin')}</button>
+                 <p class="note">${t('claimAdminNote')}</p>`
+             : `<div class="empty">${t('notAdmin')}</div>`}
+        </div>
+      </div>`;
+    const btn = $('#a-claim');
+    if (btn) btn.onclick = async () => {
+      await sendTx('CLAIM_ADMIN', {});
+      renderAdmin();
+    };
+    return;
+  }
+
+  viewEl.innerHTML = `
+    <div class="narrow">
+      <div class="sec-title">${t('adminPanel')} · ${esc(cfg.adminName || short(cfg.admin))}</div>
+      ${!isAdmin ? `<div class="empty">${t('notAdmin')}</div>` : `
+      <div class="panel" style="margin-bottom:14px">
+        <h3>${t('grantTitle')}</h3>
+        <div class="field"><label>${t('grantAmount')}</label><input id="a-amt" type="number" min="1" placeholder="1000"></div>
+        <div class="acct-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:11px;margin-bottom:12px">
+          ${accounts.map((a) => `
+          <label class="acct-row">
+            <input type="checkbox" data-addr="${esc(a.address)}">
+            <span class="mono" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name || a.address)}</span>
+            <span class="mono" style="color:var(--dim)">${fmtNum(a.grid, 0)}</span>
+          </label>`).join('') || `<div style="padding:14px;color:var(--dim);font-size:12px">${t('noAccounts')}</div>`}
+        </div>
+        <button class="btn" id="a-mint">${t('grantBtn')} · <span id="a-cnt">0</span> ${t('selected')}</button>
+      </div>
+      <div class="panel" style="margin-bottom:14px">
+        <h3>${t('settingsTitle')}</h3>
+        <div class="field"><label>${t('usdtRateLabel')}</label><input id="a-rate" type="number" step="any" min="0" placeholder="0.01" value="${cfg.config.usdtRate || ''}"></div>
+        ${CURRENCIES.map((cc) => `
+        <div class="field"><label>${cc.label}</label><input class="dep-addr mono" data-key="dep_${cc.id}" placeholder="${cc.id} address" value="${esc(cfg.config['dep_' + cc.id] || '')}"></div>`).join('')}
+        <button class="btn ghost" id="a-save">${t('save')}</button>
+      </div>`}
+      <div class="sec-title">${t('depositsTitle')}</div>
+      <div class="feed">${dep.deposits.map((d) => `
+        <div class="row">
+          <span class="s">${esc(d.name || short(d.address))} — ${fmtNum(d.usdt, 2)} ${d.currency}
+            → <b class="mono">${fmtNum(d.grid, 0)} GRID</b> · <span class="mono">${esc(d.memo)}</span>
+            <span class="tag st-${d.status}">${t(d.status)}</span></span>
+          ${isAdmin && d.status === 'pending' ? `
+          <span style="display:flex;gap:6px">
+            <button class="btn dep-ok" data-id="${esc(d.id)}" style="width:auto;padding:5px 10px;font-size:10px">${t('approve')}</button>
+            <button class="btn ghost dep-no" data-id="${esc(d.id)}" style="width:auto;padding:5px 10px;font-size:10px">${t('reject')}</button>
+          </span>` : ''}
+        </div>`).join('') || `<div class="row"><span class="s">${t('noDeposits')}</span></div>`}
+      </div>
+    </div>`;
+
+  if (isAdmin) {
+    const cnt = () => {
+      const n = viewEl.querySelectorAll('[data-addr]:checked').length;
+      const el = $('#a-cnt');
+      if (el) el.textContent = n;
+    };
+    viewEl.querySelectorAll('[data-addr]').forEach((c) => { c.addEventListener('change', cnt); });
+    $('#a-mint').onclick = async () => {
+      const amount = Number($('#a-amt').value);
+      if (!(amount > 0)) return toast(t('enterAmount'));
+      const checked = [...viewEl.querySelectorAll('[data-addr]:checked')].map((c) => c.dataset.addr);
+      if (!checked.length) return toast(t('noAccounts'));
+      for (const addr of checked) {
+        await sendTx('MINT', { to: addr, amount });
+      }
+      toast(t('confirmed'));
+      renderAdmin();
+    };
+    $('#a-save').onclick = async () => {
+      const rate = Number($('#a-rate').value);
+      if (rate > 0) await sendTx('SET_CONFIG', { key: 'usdtRate', value: String(rate) });
+      for (const inp of viewEl.querySelectorAll('.dep-addr')) {
+        if (inp.value.trim()) await sendTx('SET_CONFIG', { key: inp.dataset.key, value: inp.value.trim() });
+      }
+      toast(t('confirmed'));
+      renderAdmin();
+    };
+    viewEl.querySelectorAll('.dep-ok').forEach((b) => {
+      b.onclick = async () => { await sendTx('APPROVE_DEPOSIT', { id: b.dataset.id }); renderAdmin(); };
+    });
+    viewEl.querySelectorAll('.dep-no').forEach((b) => {
+      b.onclick = async () => { await sendTx('APPROVE_DEPOSIT', { id: b.dataset.id, reject: true }); renderAdmin(); };
+    });
   }
 }
 

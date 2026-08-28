@@ -170,6 +170,8 @@ async function route(req, res, url) {
   if (p === '/api/stats') {
     let volume = 0;
     for (const t of Object.values(chain.state.tokens)) volume += t.volume;
+    let supply = 0;
+    for (const a of Object.values(chain.state.accounts)) supply += a.grid;
     return json(res, 200, {
       height: chain.height(),
       blockTime: 4,
@@ -177,9 +179,43 @@ async function route(req, res, url) {
       tokens: Object.keys(chain.state.tokens).length,
       accounts: Object.keys(chain.state.accounts).length,
       volume: Math.round(volume * 100) / 100,
+      gridSupply: Math.round(supply * 100) / 100,
       faucetRemaining: (chain.state.accounts[node.faucet.address] || { grid: 0 }).grid,
       constants: { CREATE_FEE, FAUCET_TOTAL, GRADUATION_TARGET, TOTAL_SUPPLY, V_GRID, TRADE_FEE: 0.01 },
     });
+  }
+
+  if (p === '/api/config') {
+    return json(res, 200, {
+      admin: chain.state.admin || null,
+      adminName: chain.state.admin && chain.state.profiles[chain.state.admin]
+        ? chain.state.profiles[chain.state.admin].name : null,
+      config: chain.state.config || {},
+    });
+  }
+
+  if (p === '/api/deposits') {
+    return json(res, 200, {
+      deposits: (chain.state.deposits || []).map((d) => ({
+        ...d,
+        name: (chain.state.profiles[d.from] || {}).name || null,
+        address: d.from,
+      })),
+    });
+  }
+
+  if (p === '/api/accounts') {
+    const list = Object.entries(chain.state.accounts)
+      .filter(([addr]) => addr !== node.faucet.address)
+      .map(([address, a]) => ({
+        address,
+        grid: a.grid,
+        name: (chain.state.profiles[address] || {}).name || null,
+        nonce: a.nonce,
+      }))
+      .sort((a, b) => b.grid - a.grid)
+      .slice(0, 100);
+    return json(res, 200, list);
   }
 
   if (p === '/api/blocks') {
