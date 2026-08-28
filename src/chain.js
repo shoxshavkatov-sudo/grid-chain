@@ -43,7 +43,7 @@ export function cardAttrs(id) {
   const rot = parseInt(h.slice(16, 18), 16) % 360; // rotation / phase
   const density = 6 + (parseInt(h.slice(18, 20), 16) % 7);
   const alt = parseInt(h.slice(20, 22), 16);
-  return { c1, c2, glyph, rarity, pat, pat2, rot, density, alt };
+  return { c1, c2, hue: Math.round(hue), glyph, rarity, pat, pat2, rot, density, alt };
 }
 
 export function txPayload(tx) {

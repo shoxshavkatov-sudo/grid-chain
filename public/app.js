@@ -647,93 +647,232 @@ async function renderOnboarding() {
 }
 
 // ---------------------------------------------------------------- NFT cards
-// Generative SVG art for a card: layered patterns + glowing orb + frame.
-function cardArt(cc) {
-  const uid = 'c' + cc.id;
-  const cx = 150 + ((cc.alt % 60) - 30);
-  const cy = 200 + ((cc.rot % 80) - 40);
-  const stroke = `url(#${uid}s)`;
-  let art = '';
+// Themed generative art: forest, mountains, ocean, city, space, synthwave,
+// figure, cat — every card animated with SMIL, deterministic per id.
+function rng(seed) {
+  let s = (seed >>> 0) || 1;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
 
-  const layer = (kind, op) => {
-    let s = '';
-    if (kind === 0) { // rings
-      for (let i = 1; i <= cc.density + 4; i++) {
-        s += `<circle cx="${cx}" cy="${cy}" r="${i * 26}" fill="none" stroke="${stroke}" stroke-width="${i % 3 ? 1 : 2}" opacity="${(op * (1 - i * 0.055)).toFixed(2)}"/>`;
-      }
-    } else if (kind === 1) { // waves
-      const rows = cc.density + 3;
-      for (let k = 0; k < rows; k++) {
-        const y0 = 30 + k * (360 / rows);
-        let d = `M -12 ${y0.toFixed(1)}`;
-        for (let x = 0; x <= 324; x += 27) {
-          const dy = Math.sin((x + k * 53 + cc.rot * 3) * 0.042) * (12 + k * 2);
-          d += ` Q ${x + 13} ${(y0 + dy).toFixed(1)} ${x + 27} ${y0.toFixed(1)}`;
+function twinkle(R, n, maxY, fill = '#fff') {
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    const x = (R() * 300).toFixed(0), y = (R() * maxY).toFixed(0), r = (R() * 1.2 + 0.4).toFixed(1);
+    out += `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" opacity=".6"><animate attributeName="opacity" values=".15;.8;.15" dur="${(1.8 + R() * 3).toFixed(1)}s" begin="${(R() * 3).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+  }
+  return out;
+}
+
+function thForest(cc, R, col, uid) {
+  let layers = '';
+  const tree = (x, base, h, w, fill) => {
+    let t = '';
+    for (let s = 0; s < 3; s++) {
+      const sw = w * (1 - s * 0.22), y = base - s * h * 0.26;
+      t += `<path d="M ${x} ${(y - h * 0.42).toFixed(0)} L ${(x - sw / 2).toFixed(0)} ${y} L ${(x + sw / 2).toFixed(0)} ${y} Z" fill="${fill}"/>`;
+    }
+    return t + `<rect x="${x - 2}" y="${base}" width="4" height="${(h * 0.1).toFixed(0)}" fill="${fill}"/>`;
+  };
+  for (let layer = 2; layer >= 0; layer--) {
+    const fill = col(9 + layer * 10, 0, 42 + layer * 9);
+    const baseY = 258 + layer * 52 + R() * 8;
+    let row = `<rect x="0" y="${baseY.toFixed(0)}" width="300" height="${(430 - baseY).toFixed(0)}" fill="${fill}"/>`;
+    for (let x = -12 + R() * 18; x < 312; x += 25 + R() * 24) {
+      row += tree(x.toFixed(0), baseY.toFixed(0), (78 - layer * 16 + R() * 26).toFixed(0), (36 - layer * 6).toFixed(0), fill);
+    }
+    layers += row;
+  }
+  let fireflies = '';
+  for (let i = 0; i < 8; i++) {
+    const x = (20 + R() * 260).toFixed(0), y = (205 + R() * 165).toFixed(0);
+    fireflies += `<circle cx="${x}" cy="${y}" r="2" fill="${col(78, 46)}"><animate attributeName="opacity" values="0;1;0" dur="${(1.5 + R() * 2.2).toFixed(1)}s" begin="${(R() * 2).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+  }
+  const mx = (60 + R() * 180).toFixed(0), my = (48 + R() * 46).toFixed(0);
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 12, 150)}
+    <circle cx="${mx}" cy="${my}" r="34" fill="${col(72)}" opacity=".25"/>
+    <circle cx="${mx}" cy="${my}" r="24" fill="${col(90)}"/>${layers}${fireflies}` };
+}
+
+function thMountains(cc, R, col, uid) {
+  const sx = (70 + R() * 160).toFixed(0), sy = (60 + R() * 50).toFixed(0);
+  let rays = '';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    rays += `<line x1="${sx}" y1="${sy}" x2="${(sx * 1 + Math.cos(a) * 90).toFixed(0)}" y2="${(sy * 1 + Math.sin(a) * 90).toFixed(0)}" stroke="${col(70)}" stroke-width="2.5" opacity=".35"/>`;
+  }
+  let ridges = '';
+  for (let layer = 0; layer < 4; layer++) {
+    const base = 210 + layer * 48;
+    let d = `M -10 ${base + R() * 20}`;
+    for (let x = 0; x <= 320; x += 46 + R() * 30) {
+      d += ` L ${x.toFixed(0)} ${(base - 30 - R() * (76 - layer * 14)).toFixed(0)} L ${(x + 26).toFixed(0)} ${base.toFixed(0)}`;
+    }
+    d += ` L 320 420 L -10 420 Z`;
+    ridges += `<path d="${d}" fill="${col(12 + layer * 10, layer * 6, 46 + layer * 8)}"/>`;
+  }
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 10, 130)}
+    <g>${rays}<animateTransform attributeName="transform" type="rotate" from="0 ${sx} ${sy}" to="360 ${sx} ${sy}" dur="46s" repeatCount="indefinite"/></g>
+    <circle cx="${sx}" cy="${sy}" r="26" fill="${col(88)}"/>
+    ${ridges}
+    <g stroke="${col(85)}" stroke-width="2" fill="none" opacity=".85">
+      <path d="M0 0 q5 -6 10 0 q5 -6 10 0"/>
+      <path d="M26 8 q4 -5 8 0 q4 -5 8 0"/>
+      <animateTransform attributeName="transform" type="translate" values="-50 ${90 + R() * 40}; 340 ${50 + R() * 40}" dur="13s" repeatCount="indefinite"/>
+    </g>` };
+}
+
+function thOcean(cc, R, col, uid) {
+  const sx = (150 + R() * 60 - 30).toFixed(0);
+  let waves = '';
+  for (let w = 0; w < 4; w++) {
+    const y = 240 + w * 44, amp = 9 + w * 3, fill = col(14 + w * 9, 0, 48 + w * 9);
+    let d = `M -160 ${y}`;
+    for (let x = -160; x < 470; x += 60) {
+      d += ` q 30 ${-amp} 60 0 t 60 0`;
+    }
+    d += ` L 470 420 L -160 420 Z`;
+    waves += `<g><path d="${d}" fill="${fill}"/><animateTransform attributeName="transform" type="translate" values="0 0; 60 0; 0 0" dur="${(5 + w * 2).toFixed(0)}s" repeatCount="indefinite"/></g>`;
+  }
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 8, 110)}
+    <circle cx="${sx}" cy="120" r="46" fill="${col(70)}" opacity=".25"/>
+    <circle cx="${sx}" cy="120" r="30" fill="${col(90)}"/>
+    <g opacity=".5">${Array.from({ length: 5 }, (_, i) =>
+      `<rect x="${sx - 3}" y="${175 + i * 12}" width="6" height="${7 + R() * 5}" rx="2" fill="${col(80)}"/>`).join('')}</g>
+    <g>${`<path d="M ${sx - 22} 236 l 10 -12 l 8 6 l 12 -10 l -4 16 z" fill="${col(7)}"/><rect x="${sx - 4}" y="238" width="8" height="4" fill="${col(7)}"/>`}
+      <animateTransform attributeName="transform" type="rotate" values="-4 ${sx} 240; 4 ${sx} 240; -4 ${sx} 240" dur="3.2s" repeatCount="indefinite"/></g>
+    ${waves}` };
+}
+
+function thCity(cc, R, col, uid) {
+  let buildings = '';
+  let x = -6;
+  while (x < 300) {
+    const w = 24 + R() * 34, h = 70 + R() * 170, shade = 8 + R() * 8;
+    buildings += `<rect x="${x.toFixed(0)}" y="${(400 - h).toFixed(0)}" width="${w.toFixed(0)}" height="${(h + 20).toFixed(0)}" fill="${col(shade, 0, 38)}"/>`;
+    if (R() > 0.6) buildings += `<rect x="${(x + w / 2 - 1).toFixed(0)}" y="${(400 - h - 14).toFixed(0)}" width="2" height="14" fill="${col(shade, 0, 38)}"/>`;
+    for (let wy = 400 - h + 10; wy < 392; wy += 13) {
+      for (let wx = x + 4; wx < x + w - 6; wx += 10) {
+        if (R() > 0.62) {
+          buildings += `<rect x="${wx.toFixed(0)}" y="${wy.toFixed(0)}" width="4.5" height="6" fill="${col(82, 40)}"><animate attributeName="opacity" values="1;.25;1" dur="${(1.5 + R() * 4).toFixed(1)}s" begin="${(R() * 4).toFixed(1)}s" repeatCount="indefinite"/></rect>`;
         }
-        s += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.4" opacity="${(op * 0.85).toFixed(2)}"/>`;
-      }
-    } else if (kind === 2) { // rays
-      const n = cc.density + 7;
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + (cc.rot * Math.PI) / 180;
-        s += `<line x1="${cx}" y1="${cy}" x2="${(cx + Math.cos(a) * 520).toFixed(0)}" y2="${(cy + Math.sin(a) * 520).toFixed(0)}" stroke="${stroke}" stroke-width="${1 + (i % 3 === 0 ? 1.4 : 0)}" opacity="${(op * 0.4).toFixed(2)}"/>`;
-      }
-    } else if (kind === 3) { // hexes
-      const r = 20;
-      for (let gx = -1; gx < 9; gx++) {
-        for (let gy = -1; gy < 13; gy++) {
-          const x = gx * r * 1.75 + (gy % 2 ? r * 0.875 : 0);
-          const y = gy * r * 1.52;
-          const pts = [...Array(6)].map((_, i) => {
-            const a = (Math.PI / 3) * i + Math.PI / 6;
-            return `${(x + Math.cos(a) * r).toFixed(1)},${(y + Math.sin(a) * r).toFixed(1)}`;
-          }).join(' ');
-          const filled = (gx * 31 + gy * 17 + cc.alt) % 9 === 0;
-          s += `<polygon points="${pts}" fill="${filled ? stroke : 'none'}" stroke="${stroke}" stroke-width="1" opacity="${(op * (filled ? 0.35 : 0.5)).toFixed(2)}"/>`;
-        }
-      }
-    } else if (kind === 4) { // dot field
-      for (let gx = 0; gx < 12; gx++) {
-        for (let gy = 0; gy < 17; gy++) {
-          const x = 14 + gx * 24.8;
-          const y = 16 + gy * 24.2;
-          const d2 = Math.hypot(x - cx, y - cy);
-          const rr = Math.max(0.6, 3.4 - d2 / 90);
-          s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(1)}" fill="${stroke}" opacity="${(op * (0.75 - d2 / 700)).toFixed(2)}"/>`;
-        }
-      }
-    } else { // contours
-      for (let i = 1; i <= cc.density + 4; i++) {
-        s += `<ellipse cx="${cx}" cy="${cy}" rx="${i * 26}" ry="${i * 15}" transform="rotate(${cc.rot} ${cx} ${cy})" fill="none" stroke="${stroke}" stroke-width="1.2" opacity="${(op * (1 - i * 0.05)).toFixed(2)}"/>`;
       }
     }
-    return s;
-  };
+    x += w + 3 + R() * 7;
+  }
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 16, 150)}
+    <circle cx="${(60 + R() * 180).toFixed(0)}" cy="${(50 + R() * 40).toFixed(0)}" r="18" fill="${col(88)}" opacity=".9"/>
+    <g opacity=".8"><line x1="-20" y1="40" x2="60" y2="70" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0; 340 60" dur="6s" begin="${(R() * 5).toFixed(1)}s" repeatCount="indefinite"/></g>
+    ${buildings}<rect x="0" y="398" width="300" height="22" fill="${col(5, 0, 30)}"/>` };
+}
 
-  art += layer(cc.pat, 0.75);
-  art += layer(cc.pat2, 0.28);
-  // glowing orb at the focal point
-  art += `<circle cx="${cx}" cy="${cy}" r="86" fill="url(#${uid}o)"/>`;
-  // frame + corner ticks
-  const tick = (x, y, dx, dy) =>
-    `<path d="M ${x + dx * 18} ${y} L ${x} ${y} L ${x} ${y + dy * 18}" fill="none" stroke="url(#${uid}s)" stroke-width="2.4" opacity=".9"/>`;
-  art += `<rect x="9" y="9" width="282" height="402" rx="13" fill="none" stroke="rgba(255,255,255,.28)"/>`;
-  art += `<rect x="15" y="15" width="270" height="390" rx="10" fill="none" stroke="rgba(255,255,255,.1)"/>`;
-  art += tick(20, 20, 1, 1) + tick(280, 20, -1, 1) + tick(20, 400, 1, -1) + tick(280, 400, -1, -1);
+function thSpace(cc, R, col, uid) {
+  const px = (150 + R() * 60 - 30).toFixed(0), py = (200 + R() * 60 - 30).toFixed(0), pr = (52 + R() * 16).toFixed(0);
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 26, 420)}
+    <g><ellipse cx="${px}" cy="${py}" rx="${pr * 1.75}" ry="${(pr * 0.4).toFixed(0)}" fill="none" stroke="${col(70)}" stroke-width="3" opacity=".7" transform="rotate(-16 ${px} ${py})"/>
+      <animateTransform attributeName="transform" type="rotate" values="0 ${px} ${py}; 4 ${px} ${py}; 0 ${px} ${py}" dur="9s" repeatCount="indefinite" additive="sum"/></g>
+    <circle cx="${px}" cy="${py}" r="${pr}" fill="url(#${uid}pl)"/>
+    <path d="M ${px} ${py - pr} a ${pr} ${pr} 0 0 1 ${pr} ${pr} q -${pr * 0.6} ${pr * 0.35} -${pr} -${pr * 0.0} z" fill="${col(6, 0, 40)}" opacity=".55"/>
+    <g><circle cx="${(parseFloat(px) + pr * 1.75).toFixed(0)}" cy="${py}" r="7" fill="${col(88)}"/>
+      <animateTransform attributeName="transform" type="rotate" from="0 ${px} ${py}" to="360 ${px} ${py}" dur="11s" repeatCount="indefinite"/></g>
+    <g><circle cx="${(parseFloat(px) - pr * 1.4).toFixed(0)}" cy="${py - pr}" r="4" fill="${col(70, 30)}"/>
+      <animateTransform attributeName="transform" type="rotate" from="360 ${px} ${py}" to="0 ${px} ${py}" dur="17s" repeatCount="indefinite"/></g>` };
+}
 
-  return `<svg class="nf-art" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+function thSynth(cc, R, col, uid) {
+  let vlines = '';
+  const vpx = 150, vpy = 196;
+  for (let i = -7; i <= 7; i++) {
+    vlines += `<line x1="${vpx}" y1="${vpy}" x2="${vpx + i * 60}" y2="420" stroke="${col(60, 6)}" stroke-width="1.6" opacity=".7"/>`;
+  }
+  let hlines = '';
+  for (let i = 0, y = vpy + 6, step = 5; y < 420; i++, y += step, step *= 1.42) {
+    hlines += `<line x1="0" y1="${y.toFixed(0)}" x2="300" y2="${y.toFixed(0)}" stroke="${col(60, 6)}" stroke-width="1.4" opacity=".8"/>`;
+  }
+  let stripes = '';
+  for (let i = 0; i < 6; i++) {
+    stripes += `<rect x="${(110).toFixed(0)}" y="${(118 + i * 13).toFixed(0)}" width="80" height="${(4 + i * 1.5).toFixed(0)}" fill="url(#${uid}bg)"/>`;
+  }
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 10, 90)}
+    <g><clipPath id="${uid}sun"><circle cx="150" cy="128" r="62"/></clipPath>
+      <g clip-path="url(#${uid}sun)">
+        <circle cx="150" cy="128" r="62" fill="url(#${uid}pl)"/>
+        ${stripes}
+      </g></g>
+    <rect x="0" y="190" width="300" height="8" fill="${col(65, 6)}" opacity=".9"><animate attributeName="opacity" values=".5;1;.5" dur="3s" repeatCount="indefinite"/></rect>
+    <g>${vlines}${hlines}
+      <animateTransform attributeName="transform" type="translate" values="0 0; 0 2.5; 0 0" dur="2.2s" repeatCount="indefinite"/></g>` };
+}
+
+function thFigure(cc, R, col, uid) {
+  const sx = (110 + R() * 90).toFixed(0), sy = 150;
+  let particles = '';
+  for (let i = 0; i < 9; i++) {
+    const x = (40 + R() * 220).toFixed(0), d = (3.5 + R() * 4).toFixed(1);
+    particles += `<circle cx="${x}" cy="330" r="${(1.4 + R() * 1.6).toFixed(1)}" fill="${col(80, 42)}" opacity=".8">
+      <animateTransform attributeName="transform" type="translate" values="0 0; ${(R() * 30 - 15).toFixed(0)} -190" dur="${d}s" begin="${(R() * d).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+  }
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 12, 120)}
+    <circle cx="${sx}" cy="${sy}" r="78" fill="${col(70)}" opacity=".3"/>
+    <circle cx="${sx}" cy="${sy}" r="58" fill="${col(88)}" opacity=".95"/>
+    <path d="M -10 330 q 80 -34 160 -8 q 80 26 160 -6 L 320 420 L -10 420 Z" fill="${col(9, 0, 40)}"/>
+    <g fill="${col(5, 0, 32)}">
+      <circle cx="${sx}" cy="${(330 - 58).toFixed(0)}" r="11"/>
+      <path d="M ${sx - 13} ${330 - 44} q 13 -8 26 0 l 7 34 q -20 8 -40 0 z"/>
+      <path d="M ${sx - 11} ${330 - 12} l -3 14 M ${sx + 11} ${330 - 12} l 3 14" stroke="${col(5, 0, 32)}" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    ${particles}` };
+}
+
+function thCat(cc, R, col, uid) {
+  const mx = (200 + R() * 50).toFixed(0), my = (66 + R() * 36).toFixed(0);
+  const bx = 130, by = 352;
+  return { body: `<rect width="300" height="420" fill="url(#${uid}bg)"/>${twinkle(R, 14, 140)}
+    <circle cx="${mx}" cy="${my}" r="40" fill="${col(70)}" opacity=".22"/>
+    <circle cx="${mx}" cy="${my}" r="27" fill="${col(90)}"/>
+    <rect x="0" y="366" width="300" height="54" fill="${col(10, 0, 36)}"/>
+    <rect x="0" y="360" width="300" height="6" fill="${col(16, 0, 42)}"/>
+    <g fill="${col(5, 0, 30)}">
+      <path d="M ${bx - 34} ${by + 10} q -6 -46 24 -62 q 4 -16 18 -16 q 14 0 18 16 q 30 16 24 62 q 2 14 -6 14 l -72 0 q -8 0 -6 -14 z"/>
+      <path d="M ${bx - 30} ${by - 52} l -4 -20 l 16 8 z M ${bx + 12} ${by - 52} l 4 -20 l -16 8 z"/>
+      <g>
+        <path d="M ${bx + 36} ${by + 6} q 34 -8 40 -46 q 16 34 -8 52 q -14 10 -32 4 z"/>
+        <animateTransform attributeName="transform" type="rotate" values="-7 ${bx + 36} ${by + 6}; 7 ${bx + 36} ${by + 6}; -7 ${bx + 36} ${by + 6}" dur="2.6s" repeatCount="indefinite"/>
+      </g>
+    </g>
+    <g fill="${col(90, 46)}">
+      <circle cx="${bx - 12}" cy="${by - 34}" r="2.6"><animate attributeName="opacity" values="1;1;.1;1" keyTimes="0;.9;.94;1" dur="4.5s" repeatCount="indefinite"/></circle>
+      <circle cx="${bx + 4}" cy="${by - 34}" r="2.6"><animate attributeName="opacity" values="1;1;.1;1" keyTimes="0;.9;.94;1" dur="4.5s" repeatCount="indefinite"/></circle>
+    </g>` };
+}
+
+const CARD_THEMES = [thForest, thMountains, thOcean, thCity, thSpace, thSynth, thFigure, thCat];
+
+function cardArt(cc) {
+  const uid = 'a' + cc.id;
+  const R = rng(cc.id * 2654435761 + 11);
+  const H = Number(cc.hue) || 0;
+  const col = (l, dh = 0, s = 58) => `hsl(${(H + dh + 360) % 360} ${s}% ${l}%)`;
+  const themeFn = CARD_THEMES[(cc.pat * 3 + cc.pat2) % CARD_THEMES.length];
+  const scene = themeFn(cc, R, col, uid);
+  const defs = `
     <defs>
-      <linearGradient id="${uid}s" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
-        <stop offset="1" stop-color="${cc.c2}" stop-opacity=".9"/>
+      <linearGradient id="${uid}bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${col(16, 8)}"/>
+        <stop offset="1" stop-color="${col(6)}"/>
       </linearGradient>
-      <radialGradient id="${uid}o">
-        <stop offset="0" stop-color="#ffffff" stop-opacity=".8"/>
-        <stop offset="0.35" stop-color="${cc.c2}" stop-opacity=".4"/>
-        <stop offset="1" stop-color="${cc.c2}" stop-opacity="0"/>
+      <radialGradient id="${uid}pl" cx=".38" cy=".32" r="1">
+        <stop offset="0" stop-color="${col(84, 10)}"/>
+        <stop offset="1" stop-color="${col(30, -14)}"/>
       </radialGradient>
-    </defs>
-    ${art}
+    </defs>`;
+  const tick = (x, y, dx, dy) =>
+    `<path d="M ${x + dx * 18} ${y} L ${x} ${y} L ${x} ${y + dy * 18}" fill="none" stroke="${col(80)}" stroke-width="2.4" opacity=".85"/>`;
+  return `<svg class="nf-art" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    ${defs}${scene.body}
+    <rect x="9" y="9" width="282" height="402" rx="13" fill="none" stroke="rgba(255,255,255,.28)"/>
+    <rect x="15" y="15" width="270" height="390" rx="10" fill="none" stroke="rgba(255,255,255,.1)"/>
+    ${tick(20, 20, 1, 1)}${tick(280, 20, -1, 1)}${tick(20, 400, 1, -1)}${tick(280, 400, -1, -1)}
   </svg>`;
 }
 
