@@ -1,0 +1,14 @@
+{
+  "name": "grid-chain",
+  "version": "0.1.0",
+  "description": "GRID Chain — a proof-of-authority blockchain with a built-in token launchpad (create coins, buy/sell on an on-chain bonding curve).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

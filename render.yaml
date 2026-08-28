@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: grid-chain
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /opt/render/data
+    disk:
+      name: grid-chain-data
+      mountPath: /opt/render/data
+      sizeGB: 1
