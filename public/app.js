@@ -580,6 +580,7 @@ async function route() {
     if (page === 'buy') return await renderBuy();
     if (page === 'admin') return await renderAdmin();
     if (page === 'cards') return await renderCards();
+    if (page === 'login') return await renderOnboarding();
     if (page === 'coin' && parts[1]) return await renderCoin(decodeURIComponent(parts[1]));
     location.hash = '#/';
   } catch (e) {
@@ -646,8 +647,99 @@ async function renderOnboarding() {
 }
 
 // ---------------------------------------------------------------- NFT cards
+// Generative SVG art for a card: layered patterns + glowing orb + frame.
+function cardArt(cc) {
+  const uid = 'c' + cc.id;
+  const cx = 150 + ((cc.alt % 60) - 30);
+  const cy = 200 + ((cc.rot % 80) - 40);
+  const stroke = `url(#${uid}s)`;
+  let art = '';
+
+  const layer = (kind, op) => {
+    let s = '';
+    if (kind === 0) { // rings
+      for (let i = 1; i <= cc.density + 4; i++) {
+        s += `<circle cx="${cx}" cy="${cy}" r="${i * 26}" fill="none" stroke="${stroke}" stroke-width="${i % 3 ? 1 : 2}" opacity="${(op * (1 - i * 0.055)).toFixed(2)}"/>`;
+      }
+    } else if (kind === 1) { // waves
+      const rows = cc.density + 3;
+      for (let k = 0; k < rows; k++) {
+        const y0 = 30 + k * (360 / rows);
+        let d = `M -12 ${y0.toFixed(1)}`;
+        for (let x = 0; x <= 324; x += 27) {
+          const dy = Math.sin((x + k * 53 + cc.rot * 3) * 0.042) * (12 + k * 2);
+          d += ` Q ${x + 13} ${(y0 + dy).toFixed(1)} ${x + 27} ${y0.toFixed(1)}`;
+        }
+        s += `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.4" opacity="${(op * 0.85).toFixed(2)}"/>`;
+      }
+    } else if (kind === 2) { // rays
+      const n = cc.density + 7;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + (cc.rot * Math.PI) / 180;
+        s += `<line x1="${cx}" y1="${cy}" x2="${(cx + Math.cos(a) * 520).toFixed(0)}" y2="${(cy + Math.sin(a) * 520).toFixed(0)}" stroke="${stroke}" stroke-width="${1 + (i % 3 === 0 ? 1.4 : 0)}" opacity="${(op * 0.4).toFixed(2)}"/>`;
+      }
+    } else if (kind === 3) { // hexes
+      const r = 20;
+      for (let gx = -1; gx < 9; gx++) {
+        for (let gy = -1; gy < 13; gy++) {
+          const x = gx * r * 1.75 + (gy % 2 ? r * 0.875 : 0);
+          const y = gy * r * 1.52;
+          const pts = [...Array(6)].map((_, i) => {
+            const a = (Math.PI / 3) * i + Math.PI / 6;
+            return `${(x + Math.cos(a) * r).toFixed(1)},${(y + Math.sin(a) * r).toFixed(1)}`;
+          }).join(' ');
+          const filled = (gx * 31 + gy * 17 + cc.alt) % 9 === 0;
+          s += `<polygon points="${pts}" fill="${filled ? stroke : 'none'}" stroke="${stroke}" stroke-width="1" opacity="${(op * (filled ? 0.35 : 0.5)).toFixed(2)}"/>`;
+        }
+      }
+    } else if (kind === 4) { // dot field
+      for (let gx = 0; gx < 12; gx++) {
+        for (let gy = 0; gy < 17; gy++) {
+          const x = 14 + gx * 24.8;
+          const y = 16 + gy * 24.2;
+          const d2 = Math.hypot(x - cx, y - cy);
+          const rr = Math.max(0.6, 3.4 - d2 / 90);
+          s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(1)}" fill="${stroke}" opacity="${(op * (0.75 - d2 / 700)).toFixed(2)}"/>`;
+        }
+      }
+    } else { // contours
+      for (let i = 1; i <= cc.density + 4; i++) {
+        s += `<ellipse cx="${cx}" cy="${cy}" rx="${i * 26}" ry="${i * 15}" transform="rotate(${cc.rot} ${cx} ${cy})" fill="none" stroke="${stroke}" stroke-width="1.2" opacity="${(op * (1 - i * 0.05)).toFixed(2)}"/>`;
+      }
+    }
+    return s;
+  };
+
+  art += layer(cc.pat, 0.75);
+  art += layer(cc.pat2, 0.28);
+  // glowing orb at the focal point
+  art += `<circle cx="${cx}" cy="${cy}" r="86" fill="url(#${uid}o)"/>`;
+  // frame + corner ticks
+  const tick = (x, y, dx, dy) =>
+    `<path d="M ${x + dx * 18} ${y} L ${x} ${y} L ${x} ${y + dy * 18}" fill="none" stroke="url(#${uid}s)" stroke-width="2.4" opacity=".9"/>`;
+  art += `<rect x="9" y="9" width="282" height="402" rx="13" fill="none" stroke="rgba(255,255,255,.28)"/>`;
+  art += `<rect x="15" y="15" width="270" height="390" rx="10" fill="none" stroke="rgba(255,255,255,.1)"/>`;
+  art += tick(20, 20, 1, 1) + tick(280, 20, -1, 1) + tick(20, 400, 1, -1) + tick(280, 400, -1, -1);
+
+  return `<svg class="nf-art" viewBox="0 0 300 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="${uid}s" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
+        <stop offset="1" stop-color="${cc.c2}" stop-opacity=".9"/>
+      </linearGradient>
+      <radialGradient id="${uid}o">
+        <stop offset="0" stop-color="#ffffff" stop-opacity=".8"/>
+        <stop offset="0.35" stop-color="${cc.c2}" stop-opacity=".4"/>
+        <stop offset="1" stop-color="${cc.c2}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    ${art}
+  </svg>`;
+}
+
 function cardFaceHtml(cc, extra = '') {
   return `<div class="nftface r-${esc(cc.rarity)} ${extra}" style="--c1:${cc.c1};--c2:${cc.c2}">
+    ${cardArt(cc)}
     <span class="nf-glyph">${cc.glyph}</span>
     <span class="nf-num mono">№ ${cc.id}</span>
     <span class="nf-rar">${esc(t('r_' + cc.rarity))}</span>
@@ -1405,38 +1497,11 @@ async function renderWallet() {
         ${w ? `<button class="btn ghost" id="w-show">${t('showSecret')}</button>` : ''}
       </div>
       <p class="note">${t('faucetNote')}</p>
-      <div class="sec-title">${t('login')} / ${t('register')}</div>
-      <div class="panel">
-        ${AUTH.me ? `
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span class="tag">${t('loggedInAs')}: <b>${esc(AUTH.me.username)}</b></span>
-            <button class="btn ghost" id="w-logout" style="width:auto;padding:6px 14px;font-size:11px">${t('logout')}</button>
-          </div>
-          ${localStorage.getItem('gridchain_wallet_backup') ? `
-            <p class="note">${t('twoWallets')}</p>
-            ${w ? `<button class="btn ghost" id="w-use-acct" style="margin-top:10px">${t('useAccount')}</button>`
-                : `<button class="btn ghost" id="w-use-local" style="margin-top:10px">${t('useLocal')}</button>`}` : ''}`
-          : authFormsHtml()}
-      </div>
     </div>`;
   $('#pc-copy').onclick = () => copyText(addr);
   viewEl.querySelectorAll('.skin-dot').forEach((b) => {
     b.onclick = () => setCardSkin(b.dataset.skin);
   });
-  const lo = $('#w-logout');
-  if (lo) lo.onclick = async () => {
-    try { await apiAuth('/auth/logout', {}); } catch {}
-    AUTH.token = null;
-    AUTH.me = null;
-    localStorage.removeItem('gridchain_token');
-    toast('👋');
-    renderWallet();
-  };
-  const ua = $('#w-use-acct');
-  if (ua) ua.onclick = switchToAccount;
-  const ul = $('#w-use-local');
-  if (ul) ul.onclick = switchToLocal;
-  if (!AUTH.me) bindAuthForms();
 
   async function resolveRecipient(raw) {
     raw = raw.trim();
@@ -1498,7 +1563,7 @@ async function renderProfile(address) {
   const addr = address || (own ? own.address : null);
   if (!addr) {
     viewEl.innerHTML = `<div class="narrow"><div class="sec-title">${t('profile')}</div>
-      <div class="empty">${t('needWallet')} — <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></div></div>`;
+      <div class="empty">${t('needWallet')} — <a href="#/login" style="color:var(--fg)">${t('login')} / ${t('register')}</a> · <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></div></div>`;
     return;
   }
   const [prof, acc, cfg] = await Promise.all([api('/profile/' + addr), api('/account/' + addr), api('/config')]);
@@ -1509,6 +1574,16 @@ async function renderProfile(address) {
   viewEl.innerHTML = `
     <div class="narrow">
       <div class="sec-title">${t('profile')}</div>
+      ${isOwn ? `
+      <div class="quick" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        ${AUTH.me ? `<span class="tag">${t('loggedInAs')}: <b>${esc(AUTH.me.username)}</b></span>
+          <button class="btn ghost" id="p-logout" style="width:auto;padding:6px 14px;font-size:11px">${t('logout')}</button>` : ''}
+        ${localStorage.getItem('gridchain_wallet_backup')
+          ? (loadWallet()
+              ? `<button class="btn ghost" id="p-use-acct" style="width:auto;padding:6px 14px;font-size:11px">${t('useAccount')}</button>`
+              : `<button class="btn ghost" id="p-use-local" style="width:auto;padding:6px 14px;font-size:11px">${t('useLocal')}</button>`)
+          : ''}
+      </div>` : ''}
       <div class="avatar">${esc(prof.name ? initial : 'Ø')}</div>
       <div class="addr-box" style="margin-bottom:8px">
         <div class="k">${esc(prof.name || t('unnamed'))} ${isOwn ? '<span class="tag">YOU</span>' : ''} ${isAdmin ? '<a href="#/admin" style="color:var(--up)">⚡ ' + esc(t('admin')) + '</a>' : ''}</div>
@@ -1549,6 +1624,20 @@ async function renderProfile(address) {
     </div>`;
 
   $('#p-copy').onclick = () => copyText(addr);
+  const plo = $('#p-logout');
+  if (plo) plo.onclick = async () => {
+    try { await apiAuth('/auth/logout', {}); } catch {}
+    AUTH.token = null;
+    AUTH.me = null;
+    localStorage.removeItem('gridchain_token');
+    toast('👋');
+    location.hash = '#/login';
+    route();
+  };
+  const pua = $('#p-use-acct');
+  if (pua) pua.onclick = switchToAccount;
+  const pul = $('#p-use-local');
+  if (pul) pul.onclick = switchToLocal;
   if (isOwn) {
     $('#p-save').onclick = async () => {
       const name = $('#p-name').value.replace(/\s+/g, ' ').trim();

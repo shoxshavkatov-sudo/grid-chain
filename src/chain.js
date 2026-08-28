@@ -37,7 +37,13 @@ export function cardAttrs(id) {
   const glyph = CARD_GLYPHS[parseInt(h.slice(6, 8), 16) % CARD_GLYPHS.length];
   const roll = parseInt(h.slice(8, 12), 16) % 100;
   const rarity = roll < 1 ? 'legendary' : roll < 5 ? 'epic' : roll < 20 ? 'rare' : 'common';
-  return { c1, c2, glyph, rarity };
+  // extra deterministic art parameters consumed by the SVG renderer
+  const pat = parseInt(h.slice(12, 14), 16) % 6;   // main pattern family
+  const pat2 = parseInt(h.slice(14, 16), 16) % 6;  // secondary layer
+  const rot = parseInt(h.slice(16, 18), 16) % 360; // rotation / phase
+  const density = 6 + (parseInt(h.slice(18, 20), 16) % 7);
+  const alt = parseInt(h.slice(20, 22), 16);
+  return { c1, c2, glyph, rarity, pat, pat2, rot, density, alt };
 }
 
 export function txPayload(tx) {
