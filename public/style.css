@@ -438,6 +438,80 @@ html[data-theme="light"] .pay-card{
 .ob-panel{width:100%;max-width:420px}
 @media(prefers-reduced-motion:reduce){.ob-logo i{animation:none;opacity:.85}}
 
+/* NFT CARDS */
+.nft-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:12px}
+.nft-cell{display:flex;flex-direction:column;gap:8px}
+.nftface{
+  position:relative;aspect-ratio:3/4.2;border-radius:14px;overflow:hidden;
+  background:radial-gradient(120% 140% at 80% -10%,color-mix(in srgb,var(--c2) 55%,transparent),transparent 55%),
+    linear-gradient(150deg,var(--c1) 0%,color-mix(in srgb,var(--c1) 60%,#000) 55%,var(--c2) 140%);
+  border:1px solid color-mix(in srgb,var(--c2) 45%,transparent);
+  box-shadow:0 10px 26px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;justify-content:flex-end;padding:10px;
+}
+.nftface::before{
+  content:"";position:absolute;inset:0;opacity:.5;
+  background-image:
+    linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);
+  background-size:22px 22px;
+}
+.nf-glyph{
+  position:absolute;top:8px;right:10px;font-size:34px;color:rgba(255,255,255,.9);
+  text-shadow:0 0 18px color-mix(in srgb,var(--c2) 80%,transparent);
+}
+.nf-num{font-size:11px;color:rgba(255,255,255,.85);font-weight:700}
+.nf-rar{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.65);margin-top:2px;font-weight:700}
+.nftface.r-legendary{border-color:#ffd84d;box-shadow:0 0 30px rgba(255,216,77,.35),0 10px 26px rgba(0,0,0,.4)}
+.nftface.r-epic{border-color:rgba(190,120,255,.6)}
+.nftface.r-rare{border-color:rgba(90,160,255,.5)}
+.nft-actions{display:flex;gap:6px}
+.nft-actions .btn{flex:1}
+.nft-meta{font-size:10px;color:var(--dim)}
+.nft-price{font-size:10px;color:var(--up);text-align:center}
+
+.rar-tag{font-size:9px;letter-spacing:.1em;border-radius:7px;padding:3px 8px;font-weight:700;
+  background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.25);color:#fff}
+.rar-tag.r-legendary{color:#ffd84d;border-color:rgba(255,216,77,.6)}
+.rar-tag.r-epic{color:#d9a9ff;border-color:rgba(190,120,255,.5)}
+.rar-tag.r-rare{color:#9cc8ff;border-color:rgba(90,160,255,.45)}
+
+.pay-card.skin-nft{
+  background:
+    radial-gradient(120% 150% at 85% -20%,color-mix(in srgb,var(--c2) 50%,transparent),transparent 55%),
+    linear-gradient(150deg,var(--c1) 0%,color-mix(in srgb,var(--c1) 55%,#000) 55%,color-mix(in srgb,var(--c2) 60%,#000) 145%);
+  border-color:color-mix(in srgb,var(--c2) 40%,transparent);
+}
+.pc-watermark{
+  position:absolute;top:6px;right:14px;font-size:66px;pointer-events:none;z-index:0;
+  color:rgba(255,255,255,.14);text-shadow:0 0 30px color-mix(in srgb,var(--c2) 60%,transparent);
+}
+
+/* MINT REVEAL */
+#reveal{
+  position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  background:rgba(0,0,0,.86);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  animation:rv-in .25s ease;cursor:pointer;padding:20px;
+}
+#reveal.bye{opacity:0;transition:.3s}
+@keyframes rv-in{from{opacity:0}to{opacity:1}}
+.rv-flip{perspective:1000px}
+.rv-inner{
+  position:relative;width:min(64vw,250px);aspect-ratio:3/4.2;
+  transform-style:preserve-3d;animation:rv-flip 1s cubic-bezier(.2,.7,.3,1) .5s forwards;
+}
+@keyframes rv-flip{from{transform:rotateY(180deg)}to{transform:rotateY(0)}}
+.rv-back,.rv-front{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px}
+.rv-back{
+  transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#16161a,#0a0a0d);border:1px solid rgba(255,255,255,.15);
+  font-size:64px;font-weight:800;color:rgba(255,255,255,.25);
+}
+.rv-front .nftface{width:100%;height:100%;animation:rv-glow 2.5s ease-in-out infinite}
+@keyframes rv-glow{0%,100%{box-shadow:0 0 24px rgba(255,255,255,.15)}50%{box-shadow:0 0 54px rgba(255,255,255,.3)}}
+.rv-luck{color:#fff;font-weight:700;letter-spacing:.1em}
+#reveal .btn{background:#fff;color:#000}
+
 /* TOAST */
 .toast{
   position:fixed;left:50%;bottom:104px;transform:translateX(-50%) translateY(16px);

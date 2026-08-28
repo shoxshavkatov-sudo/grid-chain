@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes, scryptSync, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
 import { GridNode } from './src/node.js';
 import {
-  ChainError, CREATE_FEE, FAUCET_TOTAL, GRADUATION_TARGET, TOTAL_SUPPLY, V_GRID, txHash, txPayload,
+  ChainError, CREATE_FEE, FAUCET_TOTAL, GRADUATION_TARGET, TOTAL_SUPPLY, V_GRID, txHash, txPayload, cardAttrs, CARD_SUPPLY, CARD_MINT_FEE,
 } from './src/chain.js';
 import { randomKeypair, addressFromPub, signMsg } from './src/util.js';
 
@@ -280,6 +280,116 @@ async function route(req, res, url) {
     return json(res, 200, { ok: true, queued: true, tx });
   }
 
+  // ---- social auth ------------------------------------------------------
+  // Social accounts (Telegram / Google) are custodial: the keypair secret is
+  // stored server-side under users[key].secretPlain and used by the relay.
+  // Username/password accounts keep the AES-encrypted model instead.
+
+  function socialSession(key) {
+    const u = users[key];
+    if (!u) return null;
+    const token = randomBytes(24).toString('hex');
+    sessions.set(token, {
+      username: u.username, secret: u.secretPlain || null,
+      address: u.address, public: u.public,
+      social: !u.secretPlain ? false : true, created: Date.now(),
+    });
+    if (!u.secretPlain) sessions.delete(token); // no plain secret → no relay
+    return u.secretPlain ? token : null;
+  }
+
+  function createSocialUser(key, username, provider, email) {
+    const kp = randomKeypair();
+    const name = String(username || 'user').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24) || 'user';
+    try {
+      const tx = { type: 'PROFILE', from: kp.address, nonce: 0, params: { name }, pub: kp.public };
+      tx.sig = signMsg(kp.secret, txPayload(tx));
+      node.submitTx(tx);
+    } catch {}
+    const salt = randomBytes(16).toString('hex');
+    const password = randomBytes(24).toString('hex');
+    users[key] = {
+      username: name, provider, email: email || null,
+      salt, hash: hashPassword(password, salt).toString('hex'),
+      enc: encryptSecret(kp.secret, password),
+      secretPlain: kp.secret,
+      address: kp.address, public: kp.public, created: Date.now(),
+    };
+    saveUsers();
+    return users[key];
+  }
+
+  // Telegram: verify Telegram.WebApp.initData with the bot token (HMAC per TG docs)
+  if (p === '/api/auth/telegram' && req.method === 'POST') {
+    const BOT_TOKEN = process.env.BOT_TOKEN;
+    if (!BOT_TOKEN) return json(res, 503, { error: 'telegram login not configured (set BOT_TOKEN)' });
+    const body = await readBody(req);
+    const initData = String(body.initData || '');
+    if (!initData) return json(res, 400, { error: 'no initData — open the app inside Telegram' });
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+    params.delete('hash');
+    const dataCheckString = [...params.entries()].sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}=${v}`).join('\n');
+    const { createHmac } = await import('node:crypto');
+    const secret = createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
+    const calc = createHmac('sha256', secret).update(dataCheckString).digest('hex');
+    if (calc !== hash) return json(res, 401, { error: 'bad telegram signature' });
+    let tgUser;
+    try { tgUser = JSON.parse(params.get('user') || '{}'); } catch { tgUser = {}; }
+    if (!tgUser.id) return json(res, 400, { error: 'no telegram user' });
+    const key = 'tg:' + tgUser.id;
+    if (!users[key]) createSocialUser(key, tgUser.username || tgUser.first_name || ('tg' + tgUser.id), 'telegram');
+    const u = users[key];
+    const token = socialSession(key);
+    if (!token) return json(res, 500, { error: 'social session failed' });
+    return json(res, 200, { token, username: u.username, address: u.address, public: u.public });
+  }
+
+  // Google OAuth: /api/auth/google/start → Google → /api/auth/google/callback
+  if (p === '/api/auth/google/start') {
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) return json(res, 503, { error: 'google login not configured' });
+    const origin = `https://${req.headers.host}`;
+    const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: origin + '/api/auth/google/callback',
+      response_type: 'code',
+      scope: 'openid email profile',
+      prompt: 'select_account',
+    });
+    res.writeHead(302, { Location: url });
+    return res.end();
+  }
+
+  if (p === '/api/auth/google/callback') {
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) return json(res, 503, { error: 'not configured' });
+    const code = q.get('code');
+    if (!code) return json(res, 400, { error: 'no code' });
+    const origin = `https://${req.headers.host}`;
+    const tokRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: origin + '/api/auth/google/callback', grant_type: 'authorization_code',
+      }),
+    });
+    const tok = await tokRes.json();
+    if (!tok.id_token) return json(res, 401, { error: 'google exchange failed' });
+    const payload = JSON.parse(Buffer.from(tok.id_token.split('.')[1], 'base64url').toString('utf8'));
+    const email = String(payload.email || '').toLowerCase();
+    if (!email) return json(res, 401, { error: 'no email in google account' });
+    const key = 'g:' + email;
+    if (!users[key]) createSocialUser(key, payload.name || email.split('@')[0], 'google', email);
+    const token = socialSession(key);
+    if (!token) return json(res, 500, { error: 'social session failed' });
+    // SPA-friendly: hand the session token over via the URL hash
+    res.writeHead(302, { Location: '/#auth=' + token });
+    return res.end();
+  }
+
   if (p === '/api/health') {
     return json(res, 200, { ok: true, height: chain.height(), store: node.store.mode });
   }
@@ -323,6 +433,29 @@ async function route(req, res, url) {
       adminName: chain.state.admin && chain.state.profiles[chain.state.admin]
         ? chain.state.profiles[chain.state.admin].name : null,
       config: chain.state.config || {},
+      auth: {
+        telegram: !!process.env.BOT_TOKEN,
+        google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      },
+    });
+  }
+
+  if (p === '/api/cards') {
+    const addr = q.get('owner');
+    const all = Object.values(chain.state.cards || {}).map((cc) => ({
+      ...cc,
+      ...cardAttrs(cc.id),
+      ownerName: (chain.state.profiles[cc.owner] || {}).name || null,
+      byName: (chain.state.profiles[cc.by] || {}).name || null,
+      ...(addr ? { mine: cc.owner === addr } : {}),
+    }));
+    return json(res, 200, {
+      total: CARD_SUPPLY,
+      minted: all.length,
+      fee: CARD_MINT_FEE,
+      mine: addr ? all.filter((cc) => cc.owner === addr) : [],
+      forSale: all.filter((cc) => cc.sale > 0).sort((a, b) => b.at - a.at),
+      recent: all.slice(-12).reverse(),
     });
   }
 

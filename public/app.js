@@ -71,6 +71,15 @@ const I18N = {
     useAccount: 'USE ACCOUNT', useLocal: 'USE LOCAL WALLET', twoWallets: 'you have both a local wallet and a logged-in account — different addresses',
     obTagline: 'launch coins · trade on-chain', guest: 'continue without an account →',
     cardStyle: 'card',
+    continueTg: 'CONTINUE WITH TELEGRAM', continueGoogle: 'CONTINUE WITH GOOGLE',
+    tgOpenNote: 'open this app in Telegram to use one-tap login',
+    cardsTitle: 'NFT CARDS', mintBtn: 'MINT A CARD', mintedN: 'minted',
+    myCards: 'My cards', market: 'Marketplace', equip: 'EQUIP', equipped: 'EQUIPPED',
+    sellCard: 'SELL', delist: 'DELIST', buyCard: 'BUY', noCards: 'no cards yet',
+    noMarket: 'nothing listed for sale', cardsNote: '1000 unique generative patterns · 500 GRID per mint, burned · 2.5% marketplace fee',
+    reveal: 'TAP TO CONTINUE', cardLuck: '🔥 incredible luck!', cardNice: 'nice pull',
+    r_common: 'Common', r_rare: 'Rare', r_epic: 'Epic', r_legendary: 'Legendary',
+    needFunds: 'not enough GRID — use the faucet or buy GRID', soldOut: 'all 1000 cards are minted',
     copy: 'copy', copied: 'copied',
     queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
@@ -147,6 +156,15 @@ const I18N = {
     useAccount: 'ИСПОЛЬЗОВАТЬ АККАУНТ', useLocal: 'ИСПОЛЬЗОВАТЬ ЛОКАЛЬНЫЙ КОШЕЛЁК', twoWallets: 'у тебя есть и локальный кошелёк, и аккаунт — это разные адреса',
     obTagline: 'запускай монеты · торгуй на цепи', guest: 'продолжить без аккаунта →',
     cardStyle: 'карта',
+    continueTg: 'ПРОДОЛЖИТЬ С TELEGRAM', continueGoogle: 'ПРОДОЛЖИТЬ С GOOGLE',
+    tgOpenNote: 'открой приложение в Telegram для входа в один тап',
+    cardsTitle: 'NFT КАРТЫ', mintBtn: 'ОТКРЫТЬ КАРТУ', mintedN: 'открыто',
+    myCards: 'Мои карты', market: 'Маркет', equip: 'НАДЕТЬ', equipped: 'НАДЕТА',
+    sellCard: 'ПРОДАТЬ', delist: 'СНЯТЬ', buyCard: 'КУПИТЬ', noCards: 'карт пока нет',
+    noMarket: 'ничего не выставлено на продажу', cardsNote: '1000 уникальных генеративных паттернов · 500 GRID за минт, сжигается · комиссия маркета 2.5%',
+    reveal: 'НАЖМИ, ЧТОБЫ ПРОДОЛЖИТЬ', cardLuck: '🔥 невероятная удача!', cardNice: 'неплохой пулл',
+    r_common: 'Обычная', r_rare: 'Редкая', r_epic: 'Эпическая', r_legendary: 'Легендарная',
+    needFunds: 'не хватает GRID — фосет или покупка GRID', soldOut: 'все 1000 карт открыты',
     copy: 'копировать', copied: 'скопировано',
     queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
@@ -223,6 +241,15 @@ const I18N = {
     useAccount: 'AKKAUNTDAN FOYDALANISH', useLocal: 'LOKAL HAMYONDAN FOYDALANISH', twoWallets: 'ham lokal hamyon, ham akkaunt bor — bular turli manzillar',
     obTagline: 'tangalarni ishga tushir · zanjirda savdo qil', guest: 'akkauntsiz davom etish →',
     cardStyle: 'karta',
+    continueTg: 'TELEGRAM BILAN DAVOM ETISH', continueGoogle: 'GOOGLE BILAN DAVOM ETISH',
+    tgOpenNote: 'bir tappa kirish uchun ilovani Telegramda oching',
+    cardsTitle: 'NFT KARTALAR', mintBtn: 'KARTA OCHISH', mintedN: 'ochilgan',
+    myCards: 'Mening kartalarim', market: 'Bozor', equip: 'KIYISH', equipped: 'KIYILGAN',
+    sellCard: 'SOTISH', delist: 'OLIB TASHLASH', buyCard: 'SOTIB OLISH', noCards: 'kartalar yo‘q',
+    noMarket: 'sotuvga qo‘yilmagan', cardsNote: '1000 noyob generativ naqsh · mint 500 GRID, kuydiriladi · bozor komissiyasi 2.5%',
+    reveal: 'DAVOM ETISH UCHUN BOSING', cardLuck: '🔥 aql bovar qilmaydigan omad!', cardNice: 'yaxshi tushdi',
+    r_common: 'Oddiy', r_rare: 'Kamdan-kam', r_epic: 'Epk', r_legendary: 'Afsonaviy',
+    needFunds: 'GRID yetmaydi — fontan yoki GRID sotib olish', soldOut: '1000 karta ham ochildi',
     copy: 'nusxalash', copied: 'nusxalandi',
     queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
@@ -552,6 +579,7 @@ async function route() {
     if (page === 'explorer') return await renderExplorer(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'buy') return await renderBuy();
     if (page === 'admin') return await renderAdmin();
+    if (page === 'cards') return await renderCards();
     if (page === 'coin' && parts[1]) return await renderCoin(decodeURIComponent(parts[1]));
     location.hash = '#/';
   } catch (e) {
@@ -570,25 +598,170 @@ window.addEventListener('hashchange', route);
 })();
 
 // ---------------------------------------------------------------- onboarding
-function renderOnboarding() {
+async function renderOnboarding() {
   document.querySelectorAll('.tab').forEach((el) => el.classList.remove('active'));
+  const cfg = await api('/config').catch(() => ({ auth: {} }));
   viewEl.innerHTML = `
     <div class="onboard">
       <div class="ob-logo"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <h1 class="ob-title">GRID&nbsp;CHAIN</h1>
       <p class="ob-tag">${t('obTagline')}</p>
       <div class="panel ob-panel">
+        ${cfg.auth && cfg.auth.telegram ? `<button class="btn" id="ob-tg">✈️ ${t('continueTg')}</button>
+        <div style="height:10px"></div>` : ''}
+        ${cfg.auth && cfg.auth.google ? `<button class="btn ghost" id="ob-google">${t('continueGoogle')}</button>
+        <div style="height:14px"></div>` : ''}
         ${authFormsHtml()}
         <div style="height:14px"></div>
         <button class="btn ghost" id="ob-guest">${t('guest')}</button>
       </div>
     </div>`;
   bindAuthForms();
+  const tgBtn = $('#ob-tg');
+  if (tgBtn) tgBtn.onclick = async () => {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg || !tg.initData) return toast(t('tgOpenNote'));
+    try {
+      const r = await api('/auth/telegram', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData }),
+      });
+      AUTH.token = r.token;
+      AUTH.me = { username: r.username, address: r.address, public: r.public };
+      localStorage.setItem('gridchain_token', r.token);
+      localStorage.setItem('gridchain_onboarded', '1');
+      setWalletMode('account');
+      toast('✓ ' + r.username);
+      location.hash = '#/';
+      route();
+    } catch (e) { toast(e.message); }
+  };
+  const gBtn = $('#ob-google');
+  if (gBtn) gBtn.onclick = () => { location.href = '/api/auth/google/start'; };
   $('#ob-guest').onclick = () => {
     localStorage.setItem('gridchain_onboarded', '1');
     location.hash = '#/wallet';
     route();
   };
+}
+
+// ---------------------------------------------------------------- NFT cards
+function cardFaceHtml(cc, extra = '') {
+  return `<div class="nftface r-${esc(cc.rarity)} ${extra}" style="--c1:${cc.c1};--c2:${cc.c2}">
+    <span class="nf-glyph">${cc.glyph}</span>
+    <span class="nf-num mono">№ ${cc.id}</span>
+    <span class="nf-rar">${esc(t('r_' + cc.rarity))}</span>
+  </div>`;
+}
+
+function equippedCardId() {
+  const id = Number(localStorage.getItem('gridchain_card'));
+  return id > 0 ? id : null;
+}
+
+async function renderCards() {
+  const acct = currentAccount();
+  const data = await api('/cards' + (acct ? '?owner=' + acct.address : ''));
+  const equipped = equippedCardId();
+  const pct = Math.round((data.minted / data.total) * 100);
+
+  viewEl.innerHTML = `
+    <div class="narrow">
+      <div class="sec-title">${t('cardsTitle')} · ${data.minted}/${data.total} ${t('mintedN')}</div>
+      <div class="panel" style="margin-bottom:16px">
+        <div class="pbar" style="height:8px;background:var(--line-soft);border-radius:4px;position:relative;overflow:hidden;margin-bottom:14px">
+          <i style="position:absolute;inset:0 auto 0 0;width:${pct}%;background:var(--fg)"></i>
+        </div>
+        ${data.minted >= data.total
+          ? `<div class="empty">${t('soldOut')}</div>`
+          : `<button class="btn" id="mint-btn" ${acct ? '' : 'disabled'}>✦ ${t('mintBtn')} — 500 GRID</button>`}
+        <p class="note">${t('cardsNote')}</p>
+      </div>
+      ${acct ? `
+      <div class="sec-title">${t('myCards')}</div>
+      ${data.mine.length ? `<div class="nft-grid">${data.mine.map((cc) => `
+        <div class="nft-cell">
+          ${cardFaceHtml(cc)}
+          <div class="nft-actions">
+            <button class="btn ${equipped === cc.id ? '' : 'ghost'} nft-eq" data-id="${cc.id}" style="font-size:10px;padding:7px 8px">${equipped === cc.id ? '★ ' + esc(t('equipped')) : esc(t('equip'))}</button>
+            ${cc.sale > 0
+              ? `<button class="btn ghost nft-dl" data-id="${cc.id}" style="font-size:10px;padding:7px 8px">${esc(t('delist'))}</button>`
+              : `<button class="btn ghost nft-sl" data-id="${cc.id}" style="font-size:10px;padding:7px 8px">${esc(t('sellCard'))}</button>`}
+          </div>
+          ${cc.sale > 0 ? `<div class="nft-price mono">≫ ${fmtNum(cc.sale)} GRID</div>` : ''}
+        </div>`).join('')}</div>`
+        : `<div class="empty">${t('noCards')}</div>`}` : ''}
+      <div class="sec-title">${t('market')}</div>
+      ${data.forSale.length ? `<div class="nft-grid">${data.forSale.map((cc) => `
+        <div class="nft-cell">
+          ${cardFaceHtml(cc)}
+          <div class="nft-meta"><a href="#/profile/${esc(cc.owner)}">${esc(cc.ownerName || short(cc.owner))}</a></div>
+          <button class="btn nft-buy" data-id="${cc.id}" data-price="${cc.sale}" ${acct ? '' : 'disabled'} style="font-size:10px;padding:7px 8px;margin-top:6px">
+            ${esc(t('buyCard'))} · ${fmtNum(cc.sale)} GRID</button>
+        </div>`).join('')}</div>`
+        : `<div class="empty">${t('noMarket')}</div>`}
+    </div>`;
+
+  const mintBtn = $('#mint-btn');
+  if (mintBtn) mintBtn.onclick = async () => {
+    if (!acct) return;
+    const acc = await api('/account/' + acct.address);
+    if (acc.grid < 500) return toast(t('needFunds'));
+    const before = new Set(data.mine.map((cc) => cc.id));
+    const tx = await sendTx('MINT_CARD', {});
+    if (!tx) return;
+    const after = await api('/cards?owner=' + acct.address);
+    const fresh = after.mine.find((cc) => !before.has(cc.id));
+    if (fresh) showReveal(fresh);
+    else renderCards();
+  };
+  viewEl.querySelectorAll('.nft-eq').forEach((b) => {
+    b.onclick = () => {
+      localStorage.setItem('gridchain_card', b.dataset.id);
+      toast('★');
+      location.hash = '#/wallet';
+      route();
+    };
+  });
+  viewEl.querySelectorAll('.nft-sl').forEach((b) => {
+    b.onclick = async () => {
+      const price = Number(prompt('price, GRID:', '750'));
+      if (!(price > 0)) return;
+      await sendTx('SELL_CARD', { id: b.dataset.id, price });
+      renderCards();
+    };
+  });
+  viewEl.querySelectorAll('.nft-dl').forEach((b) => {
+    b.onclick = async () => {
+      await sendTx('CANCEL_SALE', { id: b.dataset.id });
+      renderCards();
+    };
+  });
+  viewEl.querySelectorAll('.nft-buy').forEach((b) => {
+    b.onclick = async () => {
+      await sendTx('BUY_CARD', { id: b.dataset.id });
+      renderCards();
+    };
+  });
+}
+
+// unboxing: full-screen flip reveal of a freshly minted card
+function showReveal(cc) {
+  const big = cc.rarity === 'legendary' || cc.rarity === 'epic';
+  if (big) pingAlert(); else beep(660, 0.09);
+  const ov = document.createElement('div');
+  ov.id = 'reveal';
+  ov.innerHTML = `
+    <div class="rv-flip">
+      <div class="rv-inner">
+        <div class="rv-back"><span>?</span></div>
+        <div class="rv-front">${cardFaceHtml(cc, 'rv')}</div>
+      </div>
+    </div>
+    <p class="rv-luck">${big ? esc(t('cardLuck')) : esc(t('cardNice'))}</p>
+    <button class="btn" style="width:auto;padding:10px 26px">${t('reveal')}</button>`;
+  ov.addEventListener('click', () => { ov.classList.add('bye'); setTimeout(() => { ov.remove(); renderCards(); }, 300); });
+  document.body.appendChild(ov);
 }
 
 // ---------------------------------------------------------------- home
@@ -1153,6 +1326,16 @@ async function renderWallet() {
   const cfg = await api('/config');
   const usdtEq = acc.grid * (Number(cfg.config && cfg.config.usdtRate) || 0);
   const tonEq = acc.grid * (Number(cfg.config && cfg.config.tonRate) || 0);
+  // equipped NFT card overrides the free skin
+  let nft = null;
+  const eqId = equippedCardId();
+  if (eqId) {
+    const cards = await api('/cards?owner=' + addr).catch(() => null);
+    nft = cards ? cards.mine.find((cc) => cc.id === eqId) : null;
+    if (!nft) localStorage.removeItem('gridchain_card');
+  }
+  const skinCls = nft ? 'skin-nft' : 'skin-' + cardSkin();
+  const nftStyle = nft ? `--c1:${nft.c1};--c2:${nft.c2}` : '';
   const prices = {};
   try {
     for (const tkn of await api('/tokens')) prices[tkn.id] = tkn.price;
@@ -1174,10 +1357,11 @@ async function renderWallet() {
   }).join('');
   viewEl.innerHTML = `
     <div class="narrow">
-      <div class="pay-card skin-${esc(cardSkin())}">
+      <div class="pay-card ${skinCls}" style="${nftStyle}">
+        ${nft ? `<span class="pc-watermark">${nft.glyph}</span>` : ''}
         <div class="pc-top">
           <span class="pc-brand"><span class="mini-grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>GRID</span>
-          <span class="pc-mode">${acct.username ? '@' + esc(acct.username) : esc(t('localWallet'))}</span>
+          <span class="pc-mode">${nft ? `<span class="rar-tag r-${nft.rarity}">NFT №${nft.id} · ${esc(t('r_' + nft.rarity))}</span>` : (acct.username ? '@' + esc(acct.username) : esc(t('localWallet')))}</span>
         </div>
         <div class="pc-bal mono">${fmtNum(acc.grid, 4)}</div>
         <div class="pc-unit">GRID</div>
@@ -1193,7 +1377,8 @@ async function renderWallet() {
       </div>
       <div class="skin-row">
         <span class="sk-label">${t('cardStyle')}</span>
-        ${SKINS.map((s) => `<button class="skin-dot ${cardSkin() === s.id ? 'on' : ''}" data-skin="${s.id}" style="background:${s.css}" title="${s.id}"></button>`).join('')}
+        ${SKINS.map((s) => `<button class="skin-dot ${!nft && cardSkin() === s.id ? 'on' : ''}" data-skin="${s.id}" style="background:${s.css}" title="${s.id}"></button>`).join('')}
+        <a class="btn ghost" href="#/cards" style="width:auto;margin-left:auto;padding:5px 12px;font-size:10px">✦ ${t('cardsTitle')}</a>
       </div>
       ${acc.tokens.length ? `
       <div class="chip-row">
@@ -1653,6 +1838,15 @@ function applyLang() {
 // ---------------------------------------------------------------- boot
 (async function boot() {
   applyLang();
+  // google oauth hands the session token over via the hash: #auth=TOKEN
+  if (location.hash.startsWith('#auth=')) {
+    const token = location.hash.slice(6);
+    localStorage.setItem('gridchain_token', token);
+    localStorage.setItem('gridchain_onboarded', '1');
+    AUTH.token = token;
+    setWalletMode('account');
+    location.hash = '#/';
+  }
   $('#lang-btn').onclick = () => {
     LANG = LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length];
     localStorage.setItem('gridchain_lang', LANG);

@@ -17,6 +17,28 @@ export const CREATE_FEE = 100;          // GRID, burned on token creation (anti-
 export const FAUCET_TOTAL = 100_000_000;
 export const HISTORY_CAP = 400;
 export const TRADE_FEE = 0.01;          // 1% of trade value: half burned, half to the coin creator
+export const CARD_SUPPLY = 1000;        // NFT card edition size
+export const CARD_MINT_FEE = 500;       // GRID, burned — mint price for a unique card
+export const CARD_TRADE_FEE = 0.025;    // 2.5% marketplace fee, burned
+
+// Deterministic generative attributes for an NFT card id — same on every node.
+// Hue comes from the golden angle → every one of the 1000 cards has a
+// mathematically unique color, so no two patterns can ever coincide.
+const CARD_GLYPHS = ['◆', '◇', '▲', '△', '●', '○', '✦', '✧', '⬡', '⬢', '✖', '◉', '❖', '⬟', '★', '☄'];
+
+export function cardAttrs(id) {
+  const h = sha256Hex('grid-card-' + id);
+  const hue = (Number(id) * 137.508) % 360;
+  const sat = 45 + (parseInt(h.slice(0, 2), 16) % 35);
+  const l1 = 7 + (parseInt(h.slice(2, 4), 16) % 10);
+  const l2 = 28 + (parseInt(h.slice(4, 6), 16) % 26);
+  const c1 = `hsl(${hue.toFixed(1)},${sat}%,${l1}%)`;
+  const c2 = `hsl(${((hue + 42) % 360).toFixed(1)},${sat + 8}%,${l2}%)`;
+  const glyph = CARD_GLYPHS[parseInt(h.slice(6, 8), 16) % CARD_GLYPHS.length];
+  const roll = parseInt(h.slice(8, 12), 16) % 100;
+  const rarity = roll < 1 ? 'legendary' : roll < 5 ? 'epic' : roll < 20 ? 'rare' : 'common';
+  return { c1, c2, glyph, rarity };
+}
 
 export function txPayload(tx) {
   // The exact bytes a signature covers: everything except sig and hash.
@@ -70,8 +92,9 @@ export class Chain {
     this.state = {
       accounts: {}, tokens: {}, profiles: {},
       admin: null,
-      config: { usdtRate: 0, dep_USDT_TRC20: '', dep_TON: '', dep_BTC: '' },
+      config: { usdtRate: 0, tonRate: 0, dep_USDT_TRC20: '', dep_TON: '', dep_BTC: '' },
       deposits: [],
+      cards: {},
     };
   }
 
@@ -309,6 +332,51 @@ export class Chain {
         }
         break;
       }
+      case 'MINT_CARD': {
+        if (!s.cards) s.cards = {};
+        const claimed = Object.keys(s.cards).length;
+        if (claimed >= CARD_SUPPLY) throw new ChainError('sold_out', 'all 1000 cards are minted');
+        if (sender.grid < CARD_MINT_FEE) throw new ChainError('insufficient', `card mint costs ${CARD_MINT_FEE} GRID`);
+        sender.grid = r4(sender.grid - CARD_MINT_FEE); // burned
+        const claimedSet = new Set(Object.keys(s.cards));
+        const remaining = [];
+        for (let i = 1; i <= CARD_SUPPLY; i++) if (!claimedSet.has(String(i))) remaining.push(i);
+        // entropy from the tx hash → deterministic on replay
+        const id = remaining[parseInt(txHash(tx).slice(0, 8), 16) % remaining.length];
+        s.cards[id] = { id, owner: from, by: from, at: blockMeta ? blockMeta.time : Date.now(), sale: null };
+        ensureStats(sender).cardsMinted = (ensureStats(sender).cardsMinted || 0) + 1;
+        break;
+      }
+      case 'SELL_CARD': {
+        const c = (s.cards || {})[String(p.id)];
+        if (!c) throw new ChainError('no_card', 'card not found');
+        if (c.owner !== from) throw new ChainError('not_owner', 'not your card');
+        const price = r4(Number(p.price));
+        if (!(price > 0)) throw new ChainError('bad_amount', 'price must be positive');
+        c.sale = price;
+        break;
+      }
+      case 'CANCEL_SALE': {
+        const c = (s.cards || {})[String(p.id)];
+        if (!c) throw new ChainError('no_card', 'card not found');
+        if (c.owner !== from) throw new ChainError('not_owner', 'not your card');
+        c.sale = null;
+        break;
+      }
+      case 'BUY_CARD': {
+        const c = (s.cards || {})[String(p.id)];
+        if (!c) throw new ChainError('no_card', 'card not found');
+        if (!(c.sale > 0)) throw new ChainError('not_for_sale', 'card is not listed');
+        const price = c.sale;
+        if (sender.grid < price) throw new ChainError('insufficient', 'insufficient GRID balance');
+        const fee = r4(price * CARD_TRADE_FEE);
+        sender.grid = r4(sender.grid - price);
+        const seller = Chain.ensureAccount(s, c.owner);
+        seller.grid = r4(seller.grid + price - fee); // fee burned
+        c.owner = from;
+        c.sale = null;
+        break;
+      }
       default:
         throw new ChainError('bad_type', `unknown tx type ${tx.type}`);
     }
@@ -473,6 +541,10 @@ function describeTx(tx, state) {
     case 'SET_CONFIG': return `set ${p.key}`;
     case 'REQUEST_BUY': return `buy request: ${p.usdtAmount} ${p.currency} → GRID`;
     case 'APPROVE_DEPOSIT': return `${p.reject ? 'rejected' : 'approved'} deposit ${String(p.id).slice(0, 8)}…`;
+    case 'MINT_CARD': return 'minted an NFT card';
+    case 'SELL_CARD': return `listed card №${p.id} for ${p.price} GRID`;
+    case 'CANCEL_SALE': return `delisted card №${p.id}`;
+    case 'BUY_CARD': return `bought card №${p.id}`;
     case 'BUY': {
       const t = state.tokens[String(p.token || '').toUpperCase()];
       const price = t ? (t.x / t.y).toPrecision(4) : '?';

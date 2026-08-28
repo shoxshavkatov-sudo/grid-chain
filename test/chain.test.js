@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Chain, ChainError, CREATE_FEE, V_GRID, TOTAL_SUPPLY, GRADUATION_TARGET } from '../src/chain.js';
+import { Chain, ChainError, CREATE_FEE, V_GRID, TOTAL_SUPPLY, GRADUATION_TARGET, cardAttrs } from '../src/chain.js';
 import { randomKeypair, signMsg } from '../src/util.js';
 import { txPayloadUtil, verifyUtil } from './helpers.js';
 
@@ -233,6 +233,57 @@ test('limit buy order above market fills when price rises to it', () => {
   // bob sells hard, price drops, order triggers
   c.applyTx(makeTx(bob, c.state, 'SELL', { token: 'LMB', amount: c.state.accounts[bob.address].tokens.LMB }), { height: 1, time: 4 });
   assert.equal(c.state.tokens.LMB.orders.length, 0, 'order must fill after price drop');
+});
+
+test('NFT cards: mint burns fee, ids unique, sell/buy/cancel flow', () => {
+  const c = freshChain();
+  c.state.accounts[alice.address].grid = 100000;
+  c.state.accounts[bob.address] = { grid: 100000, nonce: 0, tokens: {}, pub: bob.public };
+  const ids = [];
+  for (let i = 0; i < 5; i++) {
+    c.applyTx(makeTx(alice, c.state, 'MINT_CARD', {}), { height: 1, time: 1 + i });
+  }
+  const minted = Object.values(c.state.cards);
+  assert.equal(minted.length, 5);
+  assert.equal(new Set(minted.map((x) => x.id)).size, 5, 'ids must be unique');
+  assert.equal(c.state.accounts[alice.address].grid, 100000 - 5 * 500, 'fee burned per mint');
+  assert.ok(minted.every((x) => x.owner === alice.address));
+
+  const card = minted[0];
+  // non-owner cannot list
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'SELL_CARD', { id: card.id, price: 100 }), {}),
+    (e) => e.code === 'not_owner');
+  // owner lists, bob buys with fee
+  c.applyTx(makeTx(alice, c.state, 'SELL_CARD', { id: card.id, price: 1000 }), { height: 2, time: 1 });
+  const aliceBefore = c.state.accounts[alice.address].grid;
+  const bobBefore = c.state.accounts[bob.address].grid;
+  c.applyTx(makeTx(bob, c.state, 'BUY_CARD', { id: card.id }), { height: 2, time: 2 });
+  assert.equal(c.state.cards[card.id].owner, bob.address);
+  assert.equal(c.state.cards[card.id].sale, null, 'delisted after sale');
+  assert.equal(c.state.accounts[bob.address].grid, bobBefore - 1000);
+  const expected = 1000 - Math.round(1000 * 0.025 * 1e4) / 1e4;
+  assert.ok(Math.abs(c.state.accounts[alice.address].grid - aliceBefore - expected) < 0.01, 'seller got price minus fee');
+
+  // unlisted card cannot be bought
+  const card2 = minted[1];
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'BUY_CARD', { id: card2.id }), {}), (e) => e.code === 'not_for_sale');
+  // list + cancel
+  c.applyTx(makeTx(alice, c.state, 'SELL_CARD', { id: card2.id, price: 50 }), { height: 3, time: 1 });
+  c.applyTx(makeTx(alice, c.state, 'CANCEL_SALE', { id: card2.id }), { height: 3, time: 2 });
+  assert.equal(c.state.cards[card2.id].sale, null);
+});
+
+test('NFT card attrs are deterministic with all rarities possible', () => {
+  const a1 = cardAttrs(417);
+  const a2 = cardAttrs(417);
+  assert.deepEqual(a1, a2, 'same id → same attrs');
+  assert.ok(a1.c1 && a1.c2 && a1.glyph);
+  const rarities = new Set();
+  for (let i = 1; i <= 200; i++) rarities.add(cardAttrs(i).rarity);
+  assert.ok(rarities.has('common'));
+  const uniq = new Set();
+  for (let i = 1; i <= 1000; i++) uniq.add(JSON.stringify(cardAttrs(i)));
+  assert.ok(uniq.size > 900, 'patterns must be near-unique: ' + uniq.size);
 });
 
 test('cancel order refunds the escrow', () => {

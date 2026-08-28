@@ -46,7 +46,7 @@ await send(kp, 'CREATE_TOKEN', {
 // alternating buys/sells of varying size → red/green candles with volume
 const moves = [
   ['BUY', 300], ['BUY', 150], ['SELL', 60000], ['BUY', 500], ['BUY', 250],
-  ['SELL', 120000], ['BUY', 800], ['BUY', 400], ['SELL', 90000], ['BUY', 1200],
+  ['SELL', 120000], ['BUY', 800], ['BUY', 400], ['SELL', 90000], ['BUY', 600],
 ];
 for (const [side, amount] of moves) {
   await send(kp, side, { token: 'CANDLE', amount });
@@ -56,6 +56,15 @@ for (const [side, amount] of moves) {
 await send(kp, 'COMMENT', { token: 'CANDLE', text: 'first message written directly into the blockchain 🕯️' });
 await send(kp, 'COMMENT', { token: 'CANDLE', text: 'red candles are just discount green candles' });
 await send(kp, 'COMMENT', { token: 'CANDLE', text: 'every message here is a signed transaction. wild.' });
+
+// mint two NFT cards and list one on the marketplace
+await send(kp, 'MINT_CARD', {});
+await send(kp, 'MINT_CARD', {});
+const cards = await api('/cards?owner=' + kp.address);
+if (cards.mine.length >= 2) {
+  await send(kp, 'SELL_CARD', { id: cards.mine[0].id, price: 750 });
+  console.log('  listed card №' + cards.mine[0].id + ' (' + cards.mine[0].rarity + ') for 750 GRID');
+}
 
 const tok = await api('/tokens/CANDLE');
 console.log(`\n$CANDLE: price=${tok.price.toPrecision(6)} trades=${tok.trades} holders=${tok.holders} comments=${(tok.comments || []).length}`);
