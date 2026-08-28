@@ -15,6 +15,8 @@ function makeTx(kp, chainState, type, params) {
   return tx;
 }
 
+function r2approx(n) { return Math.round(n * 100) / 100; }
+
 function freshChain() {
   const c = Chain.genesis('grid1faucet');
   c.makeBlock([], validator);
@@ -87,10 +89,10 @@ test('create token burns fee, buy/sell roundtrip conserves value, price rises', 
   // sell everything back
   c.applyTx(makeTx(alice, c.state, 'SELL', { token: 'TEST', amount: c.state.accounts[alice.address].tokens.TEST }), { height: 1, time: 4 });
   assert.equal(c.state.accounts[alice.address].tokens.TEST, undefined);
-  // after a full roundtrip, only the creation fee (plus float dust) is gone
+  // after a full roundtrip: creation fee + ~1% trade fees each way are gone
   const diff = (10000 - CREATE_FEE) - c.state.accounts[alice.address].grid;
-  assert.ok(diff >= 0 && diff < 1, `roundtrip loss too big: ${diff}`);
-  assert.ok(Math.abs(t.x - V_GRID) < 1, 'reserve should return to the virtual floor');
+  assert.ok(diff > 0 && diff < 80, `roundtrip loss out of expected fee range: ${diff}`);
+  assert.ok(Math.abs(t.x - V_GRID) < 2, 'reserve should return near the virtual floor');
 });
 
 test('sell more than owned rejected', () => {
@@ -125,7 +127,8 @@ test('graduation flips when reserve target reached', () => {
   const c = freshChain();
   c.state.accounts[alice.address].grid = 1_000_000; // test-only top-up
   c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'MOON', name: 'Moon' }), { height: 1, time: 1 });
-  c.applyTx(makeTx(alice, c.state, 'BUY', { token: 'MOON', amount: GRADUATION_TARGET + 10 }), { height: 1, time: 2 });
+  // 1% fee means part of the spend never reaches the curve — buy with a margin
+  c.applyTx(makeTx(alice, c.state, 'BUY', { token: 'MOON', amount: GRADUATION_TARGET * 2 }), { height: 1, time: 2 });
   assert.ok(c.state.tokens.MOON.graduated);
 });
 
@@ -171,4 +174,77 @@ test('history records volume for candles', () => {
   const last = c.state.tokens.VOLT.history.at(-1);
   assert.ok(last.v === 777, 'volume must be recorded in history');
   assert.ok(last.p > 0);
+});
+
+test('trade fee is split: half burned, half to the creator', () => {
+  const c = freshChain();
+  c.state.accounts[alice.address].grid = 100000;
+  c.state.accounts[bob.address] = { grid: 100000, nonce: 0, tokens: {}, pub: bob.public };
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'FEE', name: 'Fee Coin' }), { height: 1, time: 1 });
+  const aliceBefore = c.state.accounts[alice.address].grid;
+  c.applyTx(makeTx(bob, c.state, 'BUY', { token: 'FEE', amount: 1000 }), { height: 1, time: 2 });
+  const creatorGain = c.state.accounts[alice.address].grid - aliceBefore;
+  assert.ok(creatorGain > 4 && creatorGain < 6, `creator should earn ~5 GRID, got ${creatorGain}`);
+  assert.ok(c.state.accounts[bob.address].grid <= 100000 - 1000, 'buyer paid full amount');
+});
+
+test('positions and stats are tracked for PnL', () => {
+  const c = freshChain();
+  c.state.accounts[alice.address].grid = 100000;
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'PNL', name: 'Pnl' }), { height: 1, time: 1 });
+  c.applyTx(makeTx(alice, c.state, 'BUY', { token: 'PNL', amount: 1000 }), { height: 1, time: 2 });
+  const pos = c.state.accounts[alice.address].positions.PNL;
+  assert.ok(pos.amount > 0 && pos.avg > 0);
+  const st = c.state.accounts[alice.address].stats;
+  assert.equal(st.trades, 1);
+  assert.ok(st.buyVol >= 1000);
+});
+
+test('limit sell order below market fills immediately', () => {
+  const c = freshChain();
+  c.state.accounts[alice.address].grid = 100000;
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'LMT', name: 'Limit' }), { height: 1, time: 1 });
+  c.applyTx(makeTx(alice, c.state, 'BUY', { token: 'LMT', amount: 1000 }), { height: 1, time: 2 });
+  const price = c.state.tokens.LMT.x / c.state.tokens.LMT.y;
+  const tokens = c.state.accounts[alice.address].tokens.LMT;
+  const gridBefore = c.state.accounts[alice.address].grid;
+  // sell limit UNDER the current price → crosses instantly
+  c.applyTx(makeTx(alice, c.state, 'ORDER', { token: 'LMT', side: 'sell', amount: r2approx(tokens / 2), price: price * 0.5 }), { height: 1, time: 3 });
+  assert.equal(c.state.tokens.LMT.orders.length, 0, 'crossed order must fill');
+  assert.ok(c.state.accounts[alice.address].grid > gridBefore, 'seller received payout');
+  assert.ok(Math.abs(c.state.accounts[alice.address].tokens.LMT - tokens / 2) < 1, 'roughly half the tokens remain');
+});
+
+test('limit buy order above market fills when price rises to it', () => {
+  const c = freshChain();
+  c.state.accounts[alice.address].grid = 100000;
+  c.state.accounts[bob.address] = { grid: 100000, nonce: 0, tokens: {}, pub: bob.public };
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'LMB', name: 'Limit B' }), { height: 1, time: 1 });
+  const price0 = c.state.tokens.LMB.x / c.state.tokens.LMB.y;
+  // bob places a buy order above the current price
+  c.applyTx(makeTx(bob, c.state, 'ORDER', { token: 'LMB', side: 'buy', amount: 500, price: price0 * 3 }), { height: 1, time: 2 });
+  // an order crossing the market at placement fills immediately
+  assert.equal(c.state.tokens.LMB.orders.length, 0);
+  assert.ok((c.state.accounts[bob.address].tokens.LMB || 0) > 0);
+
+  // alice places a resting buy order just below market (with float-dust headroom)
+  c.applyTx(makeTx(alice, c.state, 'ORDER', { token: 'LMB', side: 'buy', amount: 200, price: price0 * 1.01 }), { height: 1, time: 3 });
+  assert.equal(c.state.tokens.LMB.orders.length, 1, 'resting order stays open');
+  // bob sells hard, price drops, order triggers
+  c.applyTx(makeTx(bob, c.state, 'SELL', { token: 'LMB', amount: c.state.accounts[bob.address].tokens.LMB }), { height: 1, time: 4 });
+  assert.equal(c.state.tokens.LMB.orders.length, 0, 'order must fill after price drop');
+});
+
+test('cancel order refunds the escrow', () => {
+  const c = freshChain();
+  c.state.accounts[alice.address].grid = 100000;
+  c.applyTx(makeTx(alice, c.state, 'CREATE_TOKEN', { ticker: 'CNC', name: 'Cancel' }), { height: 1, time: 1 });
+  const price0 = c.state.tokens.CNC.x / c.state.tokens.CNC.y;
+  const before = c.state.accounts[alice.address].grid;
+  c.applyTx(makeTx(alice, c.state, 'ORDER', { token: 'CNC', side: 'buy', amount: 300, price: price0 * 0.5 }), { height: 1, time: 2 });
+  assert.ok(c.state.accounts[alice.address].grid === before - 300, 'escrow locked');
+  const ord = c.state.tokens.CNC.orders[0];
+  c.applyTx(makeTx(alice, c.state, 'CANCEL_ORDER', { token: 'CNC', id: ord.id }), { height: 1, time: 3 });
+  assert.equal(c.state.tokens.CNC.orders.length, 0);
+  assert.ok(c.state.accounts[alice.address].grid === before, 'escrow refunded');
 });

@@ -1,4 +1,5 @@
-// GRID Chain core: state machine, transactions, bonding curve, blocks.
+// GRID Chain core: state machine, transactions, bonding curve, fees,
+// positions (PnL), account stats, limit orders with escrow, blocks.
 import { canonical, sha256Hex, utf8, verifySig, signMsg, addressFromPub, r2, r4 } from './util.js';
 
 export class ChainError extends Error {
@@ -15,6 +16,7 @@ export const GRADUATION_TARGET = 10_000;
 export const CREATE_FEE = 100;          // GRID, burned on token creation (anti-spam)
 export const FAUCET_TOTAL = 100_000_000;
 export const HISTORY_CAP = 400;
+export const TRADE_FEE = 0.01;          // 1% of trade value: half burned, half to the coin creator
 
 export function txPayload(tx) {
   // The exact bytes a signature covers: everything except sig and hash.
@@ -48,13 +50,17 @@ export function stateRoot(state) {
 }
 
 function emptyAccount() {
-  return { grid: 0, nonce: 0, tokens: {} };
+  return { grid: 0, nonce: 0, tokens: {}, stats: undefined, positions: undefined };
 }
 
-function tokenPrice(t) { return t.x / t.y; }
-
-function addrFromPub(pub) {
-  try { return addressFromPub(pub); } catch { return null; }
+function ensureStats(a) {
+  if (!a.stats) a.stats = { buyVol: 0, sellVol: 0, trades: 0, comments: 0, tokensCreated: 0, realized: 0 };
+  return a.stats;
+}
+function ensurePos(a, id) {
+  if (!a.positions) a.positions = {};
+  if (!a.positions[id]) a.positions[id] = { avg: 0, amount: 0 };
+  return a.positions[id];
 }
 
 export class Chain {
@@ -66,7 +72,7 @@ export class Chain {
 
   static genesis(faucetAddress) {
     const c = new Chain();
-    this.ensureAccount(c.state, faucetAddress).grid = FAUCET_TOTAL;
+    Chain.ensureAccount(c.state, faucetAddress).grid = FAUCET_TOTAL;
     return c;
   }
 
@@ -86,7 +92,12 @@ export class Chain {
     const pub = (acc && acc.pub) || tx.pub;
     if (!pub || !/^([0-9a-f]{64})$/.test(pub)) throw new ChainError('bad_pub', 'missing or malformed pubkey');
     if (!verifySig(pub, txPayload(tx), tx.sig)) throw new ChainError('bad_sig', 'invalid signature');
-    if (addrFromPub(pub) !== tx.from) throw new ChainError('bad_from', 'from does not match pubkey');
+    try {
+      if (addressFromPub(pub) !== tx.from) throw new ChainError('bad_from', 'from does not match pubkey');
+    } catch (e) {
+      if (e instanceof ChainError) throw e;
+      throw new ChainError('bad_from', 'from does not match pubkey');
+    }
   }
 
   applyTx(tx, blockMeta) {
@@ -128,9 +139,12 @@ export class Chain {
           createdAt: now,
           x: V_GRID, y: TOTAL_SUPPLY, k: V_GRID * TOTAL_SUPPLY,
           holders: {},
+          orders: [],
           trades: 0, volume: 0, graduated: false,
-          history: [{ t: now, p: V_GRID / TOTAL_SUPPLY }],
+          comments: [],
+          history: [{ t: now, p: V_GRID / TOTAL_SUPPLY, v: 0 }],
         };
+        ensureStats(sender).tokensCreated++;
         break;
       }
       case 'PROFILE': {
@@ -138,6 +152,16 @@ export class Chain {
         if (!name || name.length > 24) throw new ChainError('bad_name', 'profile name must be 1-24 chars');
         if (!s.profiles) s.profiles = {};
         s.profiles[from] = { name, updated: blockMeta ? blockMeta.time : Date.now() };
+        break;
+      }
+      case 'BUY':
+      case 'SELL': {
+        const tk = s.tokens[String(p.token || '').toUpperCase()];
+        if (!tk) throw new ChainError('no_token', 'unknown token');
+        const amount = Number(p.amount);
+        if (!(amount > 0)) throw new ChainError('bad_amount', 'amount must be positive');
+        this.trade(s, from, tk, tx.type === 'BUY' ? 'buy' : 'sell', amount, blockMeta, false);
+        this.matchOrders(s, tk, blockMeta);
         break;
       }
       case 'TOKEN_TRANSFER': {
@@ -154,6 +178,13 @@ export class Chain {
         tk.holders[from] = r2((tk.holders[from] || 0) - amt);
         if (tk.holders[from] <= 0) delete tk.holders[from];
         tk.holders[p.to] = r2((tk.holders[p.to] || 0) + amt);
+        // move the position (cost basis) along with the tokens
+        const pos = ensurePos(sender, tk.id);
+        const toPos = ensurePos(to, tk.id);
+        toPos.avg = (toPos.avg * toPos.amount + pos.avg * amt) / (toPos.amount + amt || 1);
+        toPos.amount = r2(toPos.amount + amt);
+        pos.amount = r2(pos.amount - amt);
+        if (pos.amount <= 0) delete sender.positions[tk.id];
         break;
       }
       case 'COMMENT': {
@@ -163,49 +194,53 @@ export class Chain {
         if (!text || text.length > 200) throw new ChainError('bad_text', 'comment must be 1-200 chars');
         if (sender.grid < 1) throw new ChainError('insufficient', 'comment fee is 1 GRID');
         sender.grid = r4(sender.grid - 1); // burned anti-spam fee
-        if (!Array.isArray(tk.comments)) tk.comments = [];
+        ensureStats(sender).comments++;
         tk.comments.push({ from, text, time: blockMeta ? blockMeta.time : Date.now() });
         if (tk.comments.length > 200) tk.comments.splice(0, tk.comments.length - 200);
         break;
       }
-      case 'BUY': {
-        const t = s.tokens[String(p.token || '').toUpperCase()];
-        if (!t) throw new ChainError('no_token', 'unknown token');
-        const dx = r4(Number(p.amount));
-        if (!(dx > 0)) throw new ChainError('bad_amount', 'amount must be positive');
-        if (sender.grid < dx) throw new ChainError('insufficient', 'insufficient GRID balance');
-        const dy = r2(t.y - t.k / (t.x + dx));
-        if (!(dy > 0)) throw new ChainError('curve', 'zero token output');
-        sender.grid = r4(sender.grid - dx);
-        t.x = r4(t.x + dx);
-        t.y = r2(t.y - dy);
-        sender.tokens[t.id] = r2((sender.tokens[t.id] || 0) + dy);
-        t.holders[from] = r2((t.holders[from] || 0) + dy);
-        t.trades++;
-        t.volume = r4(t.volume + dx);
-        if (!t.graduated && t.x - V_GRID >= GRADUATION_TARGET) t.graduated = true;
-        this._pushHistory(t, blockMeta, dx);
+      case 'ORDER': {
+        const tk = s.tokens[String(p.token || '').toUpperCase()];
+        if (!tk) throw new ChainError('no_token', 'unknown token');
+        const side = p.side === 'buy' ? 'buy' : p.side === 'sell' ? 'sell' : null;
+        if (!side) throw new ChainError('bad_side', 'side must be buy or sell');
+        const amount = Number(p.amount);
+        const price = Number(p.price);
+        if (!(amount > 0)) throw new ChainError('bad_amount', 'amount must be positive');
+        if (!(price > 0)) throw new ChainError('bad_price', 'price must be positive');
+        if (side === 'buy') {
+          if (sender.grid < amount) throw new ChainError('insufficient', 'insufficient GRID to lock');
+          sender.grid = r4(sender.grid - amount); // escrow
+        } else {
+          if ((sender.tokens[tk.id] || 0) < amount) throw new ChainError('insufficient', 'insufficient token balance to lock');
+          sender.tokens[tk.id] = r2(sender.tokens[tk.id] - amount);
+          if (sender.tokens[tk.id] <= 0) delete sender.tokens[tk.id];
+          tk.holders[from] = r2((tk.holders[from] || 0) - amount);
+          if (tk.holders[from] <= 0) delete tk.holders[from];
+        }
+        tk.orders.push({
+          id: txHash(tx), from, side,
+          amount: Number(amount), price: Number(price), // raw: prices are ~1e-6, r4 would floor them to 0
+          created: blockMeta ? blockMeta.time : Date.now(),
+        });
+        // an order that already crosses the market fills immediately
+        this.matchOrders(s, tk, blockMeta);
         break;
       }
-      case 'SELL': {
-        const t = s.tokens[String(p.token || '').toUpperCase()];
-        if (!t) throw new ChainError('no_token', 'unknown token');
-        const amt = r2(Number(p.amount));
-        if (!(amt > 0)) throw new ChainError('bad_amount', 'amount must be positive');
-        if ((sender.tokens[t.id] || 0) < amt) throw new ChainError('insufficient', 'insufficient token balance');
-        let out = r4(t.x - t.k / (t.y + amt));
-        out = Math.min(out, r4(t.x - V_GRID)); // never drain below the virtual floor
-        if (!(out > 0)) throw new ChainError('curve', 'zero GRID output (reserve at floor)');
-        sender.tokens[t.id] = r2(sender.tokens[t.id] - amt);
-        if (sender.tokens[t.id] <= 0) delete sender.tokens[t.id];
-        t.holders[from] = r2((t.holders[from] || 0) - amt);
-        if (t.holders[from] <= 0) delete t.holders[from];
-        t.x = r4(t.x - out);
-        t.y = r2(t.y + amt);
-        sender.grid = r4(sender.grid + out);
-        t.trades++;
-        t.volume = r4(t.volume + out);
-        this._pushHistory(t, blockMeta, out);
+      case 'CANCEL_ORDER': {
+        const tk = s.tokens[String(p.token || '').toUpperCase()];
+        if (!tk) throw new ChainError('no_token', 'unknown token');
+        const idx = tk.orders.findIndex((o) => o.id === String(p.id || ''));
+        if (idx === -1) throw new ChainError('no_order', 'order not found');
+        const ord = tk.orders[idx];
+        if (ord.from !== from) throw new ChainError('not_owner', 'not your order');
+        // refund the escrow
+        if (ord.side === 'buy') sender.grid = r4(sender.grid + ord.amount);
+        else {
+          sender.tokens[tk.id] = r2((sender.tokens[tk.id] || 0) + ord.amount);
+          tk.holders[from] = r2((tk.holders[from] || 0) + ord.amount);
+        }
+        tk.orders.splice(idx, 1);
         break;
       }
       default:
@@ -223,6 +258,88 @@ export class Chain {
       time: blockMeta ? blockMeta.time : Date.now(),
     });
     if (this.recentTxs.length > 200) this.recentTxs.length = 200;
+  }
+
+  // ---- trading core (shared by market txs and limit-order fills) ---------
+  // escrowed=true means the GRID/tokens were already locked by ORDER.
+
+  trade(s, from, tk, side, amount, blockMeta, escrowed) {
+    const sender = Chain.ensureAccount(s, from);
+    const creator = tk.creator && tk.creator !== from ? Chain.ensureAccount(s, tk.creator) : null;
+
+    if (side === 'buy') {
+      const dx = r4(amount);
+      if (!escrowed) {
+        if (sender.grid < dx) throw new ChainError('insufficient', 'insufficient GRID balance');
+        sender.grid = r4(sender.grid - dx);
+      }
+      const fee = r4(dx * TRADE_FEE);
+      const creatorCut = r4(fee / 2); // the other half is burned
+      const curveIn = r4(dx - fee);
+      const dy = r2(tk.y - tk.k / (tk.x + curveIn));
+      if (!(dy > 0)) throw new ChainError('curve', 'zero token output');
+      tk.x = r4(tk.x + curveIn);
+      tk.y = r2(tk.y - dy);
+      sender.tokens[tk.id] = r2((sender.tokens[tk.id] || 0) + dy);
+      tk.holders[from] = r2((tk.holders[from] || 0) + dy);
+      if (creator) creator.grid = r4(creator.grid + creatorCut);
+      const pos = ensurePos(sender, tk.id);
+      pos.avg = (pos.avg * pos.amount + dx) / (pos.amount + dy);
+      pos.amount = r2(pos.amount + dy);
+      const st = ensureStats(sender);
+      st.buyVol = r4(st.buyVol + dx); st.trades++;
+      tk.trades++; tk.volume = r4(tk.volume + dx);
+      if (!tk.graduated && tk.x - V_GRID >= GRADUATION_TARGET) tk.graduated = true;
+      this._pushHistory(tk, blockMeta, dx);
+    } else {
+      const amt = r2(amount);
+      if (!escrowed) {
+        if ((sender.tokens[tk.id] || 0) < amt) throw new ChainError('insufficient', 'insufficient token balance');
+        sender.tokens[tk.id] = r2(sender.tokens[tk.id] - amt);
+        if (sender.tokens[tk.id] <= 0) delete sender.tokens[tk.id];
+        tk.holders[from] = r2((tk.holders[from] || 0) - amt);
+        if (tk.holders[from] <= 0) delete tk.holders[from];
+      }
+      let out = r4(tk.x - tk.k / (tk.y + amt));
+      out = Math.min(out, r4(tk.x - V_GRID)); // never drain below the virtual floor
+      if (!(out > 0)) throw new ChainError('curve', 'zero GRID output (reserve at floor)');
+      const fee = r4(out * TRADE_FEE);
+      const creatorCut = r4(fee / 2);
+      const net = r4(out - fee);
+      tk.x = r4(tk.x - out);
+      tk.y = r2(tk.y + amt);
+      sender.grid = r4(sender.grid + net);
+      if (creator) creator.grid = r4(creator.grid + creatorCut);
+      const pos = ensurePos(sender, tk.id);
+      const st = ensureStats(sender);
+      st.realized = r4(st.realized + (net - pos.avg * amt));
+      pos.amount = r2(pos.amount - amt);
+      if (pos.amount <= 0) delete sender.positions[tk.id];
+      st.sellVol = r4(st.sellVol + net); st.trades++;
+      tk.trades++; tk.volume = r4(tk.volume + out);
+      this._pushHistory(tk, blockMeta, out);
+    }
+  }
+
+  // Fill every limit order crossed by the current price. Buy orders trigger
+  // when price <= limit, sell orders when price >= limit.
+  matchOrders(s, tk, blockMeta) {
+    let guard = 0;
+    while (guard++ < 100) {
+      const price = tk.x / tk.y;
+      const idx = tk.orders.findIndex((o) =>
+        (o.side === 'buy' && o.price >= price) || (o.side === 'sell' && o.price <= price));
+      if (idx === -1) break;
+      const ord = tk.orders[idx];
+      try {
+        this.trade(s, ord.from, tk, ord.side, ord.amount, blockMeta, true);
+        tk.orders.splice(idx, 1);
+      } catch (e) {
+        // a stuck order must not wedge the chain — drop it and burn the escrow
+        tk.orders.splice(idx, 1);
+        console.warn(`[chain] dropped stuck order ${ord.id}: ${e.message}`);
+      }
+    }
   }
 
   _pushHistory(t, blockMeta, vol) {
@@ -283,6 +400,8 @@ function describeTx(tx, state) {
     case 'PROFILE': return `set profile name → ${String(p.name).slice(0, 24)}`;
     case 'TOKEN_TRANSFER': return `sent ${p.amount} $${String(p.token).toUpperCase()} → ${String(p.to).slice(0, 10)}…`;
     case 'COMMENT': return `💬 $${String(p.token).toUpperCase()}: ${String(p.text).slice(0, 40)}`;
+    case 'ORDER': return `limit ${p.side} ${p.amount} $${String(p.token).toUpperCase()} @ ${p.price}`;
+    case 'CANCEL_ORDER': return `cancelled order ${String(p.id).slice(0, 10)}…`;
     case 'BUY': {
       const t = state.tokens[String(p.token || '').toUpperCase()];
       const price = t ? (t.x / t.y).toPrecision(4) : '?';

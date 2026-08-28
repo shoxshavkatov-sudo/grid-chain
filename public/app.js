@@ -33,6 +33,22 @@ const I18N = {
     commentFee: '1 GRID per message, burned on-chain · sealed into a block',
     noComments: 'no messages yet — be the first to write on-chain',
     walletToChat: 'connect a wallet to chat',
+    live: 'LIVE', favorites: 'Favorites', favAdd: '★ added to favorites', favRemove: '☆ removed from favorites',
+    top: 'Top', topTraders: 'Traders', topCreators: 'Creators', topChatters: 'Chatters', topCoins: 'Coins',
+    explorer: 'Explorer', searchPh: 'block № / address / tx hash / $TICKER', search: 'SEARCH',
+    block: 'Block', notFound: 'nothing found', txsN: 'txs', time: 'time',
+    limitOrder: 'Limit order', openOrders: 'Open orders', noOrders: 'no open orders', place: 'PLACE',
+    side: 'side', cancel: 'CANCEL', atNow: '≈ now', escrowNote: 'funds are locked on-chain until filled or cancelled',
+    share: 'Share', shareVia: 'Telegram', copyLink: 'copy link', ogCard: 'preview card',
+    shareMsg: (tk) => `$${tk} is trading on GRID Chain 🕯️`,
+    alert: 'Alert', alertSet: (pct) => `alert set: ±${pct}%`,
+    alertUp: (tk, pct) => `🔥 $${tk} +${pct}%`, alertDown: (tk, pct) => `🧊 $${tk} -${pct}%`,
+    avgEntry: 'avg entry', pnl: 'PnL', value: 'Value', positions: 'Positions',
+    feeNoteTrade: '1% fee: half burned, half to the coin creator',
+    ach_first_coin: 'first coin', ach_trader_10: 'degen', ach_trader_100: 'chad trader',
+    ach_chatter: 'voice of the grid', ach_loud: 'loudmouth', ach_whale: 'whale',
+    ach_graduator: 'graduator', ach_collector: 'collector',
+    achievements: 'Achievements',
     copy: 'copy', copied: 'copied',
     queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
@@ -70,6 +86,22 @@ const I18N = {
     commentFee: '1 GRID за сообщение, сжигается на цепи · попадает в блок',
     noComments: 'сообщений пока нет — напиши первое в блокчейне',
     walletToChat: 'подключи кошелёк, чтобы писать в чат',
+    live: 'LIVE', favorites: 'Избранное', favAdd: '★ добавлено в избранное', favRemove: '☆ убрано из избранного',
+    top: 'Топ', topTraders: 'Трейдеры', topCreators: 'Создатели', topChatters: 'Болтуны', topCoins: 'Монеты',
+    explorer: 'Обозреватель', searchPh: 'блок № / адрес / хэш tx / $ТИКЕР', search: 'ИСКАТЬ',
+    block: 'Блок', notFound: 'ничего не найдено', txsN: 'тx', time: 'время',
+    limitOrder: 'Лимитный ордер', openOrders: 'Открытые ордера', noOrders: 'ордеров нет', place: 'ВЫСТАВИТЬ',
+    side: 'сторона', cancel: 'ОТМЕНИТЬ', atNow: '≈ сейчас', escrowNote: 'средства блокируются на цепи до исполнения или отмены',
+    share: 'Поделиться', shareVia: 'Telegram', copyLink: 'скопировать ссылку', ogCard: 'карточка',
+    shareMsg: (tk) => `$${tk} торгуется на GRID Chain 🕯️`,
+    alert: 'Алерты', alertSet: (pct) => `алерт установлен: ±${pct}%`,
+    alertUp: (tk, pct) => `🔥 $${tk} +${pct}%`, alertDown: (tk, pct) => `🧊 $${tk} -${pct}%`,
+    avgEntry: 'средняя вход', pnl: 'PnL', value: 'Стоимость', positions: 'Позиции',
+    feeNoteTrade: 'комиссия 1%: половина сжигается, половина создателю монеты',
+    ach_first_coin: 'первая монета', ach_trader_10: 'деген', ach_trader_100: 'чад-трейдер',
+    ach_chatter: 'голос сетки', ach_loud: 'громкоговоритель', ach_whale: 'кит',
+    ach_graduator: 'градуатор', ach_collector: 'коллекционер',
+    achievements: 'Ачивки',
     copy: 'копировать', copied: 'скопировано',
     queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
@@ -107,6 +139,22 @@ const I18N = {
     commentFee: 'har xabar 1 GRID, zanjirda kuydiriladi · blokka muhrlanadi',
     noComments: 'xabarlar yo‘q — blokcheynga birinchi bo‘lib yozing',
     walletToChat: 'chat yozish uchun hamyonni ulang',
+    live: 'LIVE', favorites: 'Sevimlilar', favAdd: '★ sevimlilarga qo‘shildi', favRemove: '☆ sevimlilardan olindi',
+    top: 'Top', topTraders: 'Trederlar', topCreators: 'Yaratuvchilar', topChatters: 'Gapchilar', topCoins: 'Tangalar',
+    explorer: 'Explorer', searchPh: 'blok № / manzil / tx hash / $TICKER', search: 'QIDIRISH',
+    block: 'Blok', notFound: 'hech narsa topilmadi', txsN: 'tx', time: 'vaqt',
+    limitOrder: 'Limit buyurtma', openOrders: 'Ochiq buyurtmalar', noOrders: 'buyurtmalar yo‘q', place: 'QO‘YISH',
+    side: 'tomoni', cancel: 'BEKOR QILISH', atNow: '≈ hozir', escrowNote: 'mablag‘lar to‘lguncha zanjirda bloklanadi',
+    share: 'Ulashish', shareVia: 'Telegram', copyLink: 'havolani nusxalash', ogCard: 'karta',
+    shareMsg: (tk) => `$${tk} GRID Chain’da savdoda 🕯️`,
+    alert: 'Ogohlantirish', alertSet: (pct) => `alert o‘rnatildi: ±${pct}%`,
+    alertUp: (tk, pct) => `🔥 $${tk} +${pct}%`, alertDown: (tk, pct) => `🧊 $${tk} -${pct}%`,
+    avgEntry: 'o‘rtacha kirish', pnl: 'PnL', value: 'Qiymat', positions: 'Pozitsiyalar',
+    feeNoteTrade: '1% komissiya: yarimi kuydiriladi, yarimi tanga yaratuvchisiga',
+    ach_first_coin: 'birinchi tanga', ach_trader_10: 'degen', ach_trader_100: 'chad treder',
+    ach_chatter: 'grid ovozi', ach_loud: 'baland ovozli', ach_whale: 'kit',
+    ach_graduator: 'graduator', ach_collector: 'kollektor',
+    achievements: 'Yutuqlar',
     copy: 'nusxalash', copied: 'nusxalandi',
     queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
@@ -124,6 +172,100 @@ if (!LANGS.includes(LANG)) {
   LANG = code.startsWith('ru') ? 'ru' : code.startsWith('uz') ? 'uz' : 'en';
 }
 const t = (k) => (I18N[LANG] && I18N[LANG][k] !== undefined ? I18N[LANG][k] : I18N.en[k] ?? k);
+
+// ---------------------------------------------------------------- sounds
+let MUTED = localStorage.getItem('gridchain_muted') === '1';
+let audioCtx = null;
+function beep(freq = 880, dur = 0.07, gain = 0.045) {
+  if (MUTED) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.frequency.value = freq;
+    o.type = 'sine';
+    g.gain.value = gain;
+    o.connect(g).connect(audioCtx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.stop(audioCtx.currentTime + dur + 0.02);
+  } catch {}
+}
+function pingChat() { beep(880, 0.06); setTimeout(() => beep(1318, 0.09), 75); }
+function pingAlert() { beep(660, 0.09, 0.06); setTimeout(() => beep(990, 0.09, 0.06), 100); setTimeout(() => beep(1320, 0.12, 0.06), 200); }
+function updateMuteIcon() {
+  $('#mute-icon').innerHTML = MUTED
+    ? '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="m16.5 9.5 5 5M21.5 9.5l-5 5"/>'
+    : '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>';
+}
+
+// ---------------------------------------------------------------- watchlist & alerts
+function watchlist() {
+  try { return JSON.parse(localStorage.getItem('gridchain_watchlist') || '[]'); } catch { return []; }
+}
+function toggleWatch(id) {
+  const w = watchlist();
+  const added = !w.includes(id);
+  const nw = added ? [...w, id] : w.filter((x) => x !== id);
+  localStorage.setItem('gridchain_watchlist', JSON.stringify(nw));
+  toast(added ? t('favAdd') : t('favRemove'));
+  route();
+}
+function alerts() {
+  try { return JSON.parse(localStorage.getItem('gridchain_alerts') || '[]'); } catch { return []; }
+}
+function setAlert(token, base, pct) {
+  const list = alerts().filter((a) => a.token !== token);
+  list.push({ token, base, pct });
+  localStorage.setItem('gridchain_alerts', JSON.stringify(list));
+  toast(t('alertSet')(pct));
+}
+function checkAlerts(prices) {
+  const list = alerts();
+  let changed = false;
+  for (const a of list) {
+    const info = prices[a.token];
+    if (!info) continue;
+    if (info.p >= a.base * (1 + a.pct / 100)) { toast(t('alertUp')(a.token, a.pct), 4000); pingAlert(); changed = true; }
+    else if (info.p <= a.base * (1 - a.pct / 100)) { toast(t('alertDown')(a.token, a.pct), 4000); pingAlert(); changed = true; }
+  }
+  if (changed) {
+    const keep = list.filter((a) => {
+      const info = prices[a.token];
+      if (!info) return true;
+      const up = info.p >= a.base * (1 + a.pct / 100);
+      const down = info.p <= a.base * (1 - a.pct / 100);
+      return !up && !down;
+    });
+    localStorage.setItem('gridchain_alerts', JSON.stringify(keep));
+  }
+}
+
+// ---------------------------------------------------------------- SSE live stream
+let softRefreshTimer = null;
+function softRefresh() {
+  clearTimeout(softRefreshTimer);
+  softRefreshTimer = setTimeout(() => {
+    if (!typing()) route();
+  }, 700);
+}
+function initStream() {
+  try {
+    const es = new EventSource('/api/stream');
+    es.onmessage = (ev) => {
+      let data;
+      try { data = JSON.parse(ev.data); } catch { return; }
+      if (data.type !== 'block') return;
+      const badge = $('#height-badge');
+      if (badge) badge.innerHTML = `${t('block')} <b>${data.height}</b> <span class="live-dot"></span>`;
+      checkAlerts(data.prices || {});
+      const hasChat = (data.feed || []).some((f) => f.summary && f.summary.startsWith('💬'));
+      if (hasChat) pingChat();
+      softRefresh();
+    };
+  } catch {}
+}
 
 // ---------------------------------------------------------------- helpers
 const $ = (s) => document.querySelector(s);
@@ -264,6 +406,7 @@ async function route() {
     if (page === 'create') return await renderCreate();
     if (page === 'wallet') return await renderWallet();
     if (page === 'profile') return await renderProfile(parts[1] ? decodeURIComponent(parts[1]) : null);
+    if (page === 'explorer') return await renderExplorer(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'coin' && parts[1]) return await renderCoin(decodeURIComponent(parts[1]));
     location.hash = '#/';
   } catch (e) {
@@ -283,17 +426,29 @@ window.addEventListener('hashchange', route);
 
 // ---------------------------------------------------------------- home
 async function renderHome() {
-  const [stats, tokens, txs] = await Promise.all([api('/stats'), api('/tokens'), api('/txs?limit=14')]);
-  const cells = tokens.map((tk) => `
+  const [stats, tokens, txs, lb] = await Promise.all([
+    api('/stats'), api('/tokens'), api('/txs?limit=14'), api('/leaderboard'),
+  ]);
+  const watch = watchlist();
+  const cellCard = (tk, starred) => `
     <a class="cell-card" href="#/coin/${esc(tk.id)}">
-      ${tk.graduated ? `<span class="grad-flag">GRADUATED</span>` : ''}
+      ${tk.graduated ? '<span class="grad-flag">GRADUATED</span>' : ''}
+      <button class="star ${starred ? 'on' : ''}" data-star="${esc(tk.id)}" title="watchlist">${starred ? '★' : '☆'}</button>
       <div class="tick mono">$${esc(tk.ticker)}</div>
       <div class="nm">${esc(tk.name)}</div>
       <div class="row"><span>${t('price')}</span><b class="mono">${fmtPrice(tk.price)}</b></div>
       <div class="row"><span>${t('volume')}</span><b class="mono">${fmtNum(tk.volume)}</b></div>
       <div class="row"><span>${t('holders')}</span><b class="mono">${tk.holders}</b></div>
       <div class="pbar"><i style="width:${Math.round(tk.progress * 100)}%"></i></div>
-    </a>`).join('');
+    </a>`;
+  const favCells = tokens.filter((tk) => watch.includes(tk.id)).map((tk) => cellCard(tk, true)).join('');
+  const cells = tokens.filter((tk) => !watch.includes(tk.id)).map((tk) => cellCard(tk, false)).join('');
+
+  const lbRow = (a, metric) => `
+    <a class="row" href="#/profile/${esc(a.address)}">
+      <span class="s">${esc(a.name || short(a.address))}</span>
+      <span class="m mono">${metric}</span>
+    </a>`;
 
   viewEl.innerHTML = `
     <div class="stats">
@@ -303,14 +458,37 @@ async function renderHome() {
       <div class="stat"><div class="k">${t('accounts')}</div><div class="v mono">${stats.accounts}</div></div>
       <div class="stat"><div class="k">${t('volume')}</div><div class="v mono">${fmtNum(stats.volume, 0)}</div></div>
     </div>
+    ${favCells ? `
+    <div class="sec-title">${t('favorites')}</div>
+    <div class="cells">${favCells}</div>` : ''}
     <div class="sec-title">${t('latestCells')}</div>
     ${cells ? `<div class="cells">${cells}</div>`
       : `<div class="empty">${t('noCoins')}<br><a style="color:var(--fg);border-bottom:1px solid var(--dim)" href="#/create">${t('createFirst')}</a></div>`}
+    <div class="sec-title">// ${t('top')}</div>
+    <div class="lb-grid">
+      <div><div class="lb-title">${t('topCoins')}</div>
+        <div class="feed">${lb.coins.map((c) => `
+          <a class="row" href="#/coin/${esc(c.id)}"><span class="s mono">$${esc(c.ticker)}</span>
+          <span class="m mono">v${fmtNum(c.volume, 0)}</span></a>`).join('') || `<div class="row"><span class="s">—</span></div>`}</div>
+      </div>
+      <div><div class="lb-title">${t('topTraders')}</div>
+        <div class="feed">${lb.traders.filter(a=>a.vol>0).map((a) => lbRow(a, fmtNum(a.vol, 0))).join('') || `<div class="row"><span class="s">—</span></div>`}</div>
+      </div>
+      <div><div class="lb-title">${t('topCreators')}</div>
+        <div class="feed">${lb.creators.filter(a=>a.tokensCreated>0).map((a) => lbRow(a, a.tokensCreated)).join('') || `<div class="row"><span class="s">—</span></div>`}</div>
+      </div>
+      <div><div class="lb-title">${t('topChatters')}</div>
+        <div class="feed">${lb.chatters.filter(a=>a.comments>0).map((a) => lbRow(a, a.comments)).join('') || `<div class="row"><span class="s">—</span></div>`}</div>
+      </div>
+    </div>
     <div class="sec-title">${t('liveFeed')}</div>
     <div class="feed">${txs.map((tx) => `
       <div class="row"><span class="s">${esc(tx.summary)}</span><span class="m">${ago(tx.time)}</span></div>`).join('')
       || `<div class="row"><span class="s">${t('waitingTx')}</span></div>`}
     </div>`;
+  viewEl.querySelectorAll('[data-star]').forEach((b) => {
+    b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); toggleWatch(b.dataset.star); };
+  });
   poll(async () => { if (!typing()) route(); });
 }
 
@@ -397,10 +575,22 @@ async function renderCoin(id) {
   const acc = w ? await api('/account/' + w.address) : null;
   const held = acc ? (acc.tokens.find((x) => x.id === tk.id) || { amount: 0 }).amount : 0;
   const creator = tk.creatorName ? `${esc(tk.creatorName)}` : short(tk.creator);
+  const watch = watchlist();
 
   viewEl.innerHTML = `
     <div class="coin-head"><span class="tick mono">$${esc(tk.ticker)}</span>
-      <span class="nm">${t('price')} · <a href="#/profile/${esc(tk.creator)}" style="color:var(--fg)">${creator}</a></span></div>
+      <span class="nm">${esc(tk.name)} · <a href="#/profile/${esc(tk.creator)}" style="color:var(--fg)">${creator}</a></span>
+      <span style="margin-left:auto;display:flex;gap:8px">
+        <button class="icon-btn star ${watch.includes(tk.id) ? 'on' : ''}" id="coin-star" title="${t('favorites')}">${watch.includes(tk.id) ? '★' : '☆'}</button>
+        <button class="icon-btn" id="coin-share" title="${t('share')}">
+          <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/></svg>
+        </button>
+      </span>
+    </div>
+    <div class="alert-row" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;font-weight:600">🔔 ${t('alert')}</span>
+      ${[25, 50, 100].map((pct) => `<button class="btn ghost alert-btn" data-pct="${pct}" style="width:auto;padding:5px 12px;font-size:11px">±${pct}%</button>`).join('')}
+    </div>
     ${tk.desc ? `<p style="color:var(--dim);font-size:13px;margin-top:8px;max-width:640px">${esc(tk.desc)}</p>` : ''}
     <div class="stats" style="margin:16px 0">
       <div class="stat"><div class="k">${t('price')}</div><div class="v mono">${fmtPrice(tk.price)}</div></div>
@@ -430,7 +620,28 @@ async function renderCoin(id) {
         <div class="field"><label>${t('amountTokens')}</label><input id="sell-amt" type="number" min="0" placeholder="${Math.floor(held) || 0}"></div>
         <button class="btn ghost" id="sell-btn">${t('sell')}</button>
       </div>
+      <div class="panel" style="grid-column:1/-1">
+        <h3>${t('limitOrder')}</h3>
+        <div class="trade-grid" style="gap:10px">
+          <div class="field"><label>${t('side')}</label>
+            <select id="lo-side"><option value="buy">${t('buy')}</option><option value="sell">${t('sell')}</option></select></div>
+          <div class="field"><label id="lo-amt-label">${t('amountGrid')}</label><input id="lo-amt" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>${t('price')} <button class="mini-link" id="lo-now" type="button">${t('atNow')}</button></label>
+            <input id="lo-price" class="mono" type="number" min="0" step="any" placeholder="0.000001"></div>
+        </div>
+        <button class="btn ghost" id="lo-btn" style="margin-top:6px">${t('place')}</button>
+        <p class="note">${t('escrowNote')} · ${t('feeNoteTrade')}</p>
+      </div>
     </div>
+    ${(tk.orders || []).length ? `
+    <div class="sec-title">${t('openOrders')}</div>
+    <div class="feed" style="max-width:640px">${tk.orders.map((o) => `
+      <div class="row">
+        <span class="s"><span class="side-tag ${o.side}">${o.side === 'buy' ? t('buy') : t('sell')}</span>
+          ${fmtNum(o.amount, 4)} @ <span class="mono">${fmtPrice(o.price)}</span>
+          <span style="color:var(--dim)">· ${o.name ? esc(o.name) : short(o.from)}</span></span>
+        ${w && o.from === w.address ? `<button class="btn ghost cancel-btn" data-oid="${esc(o.id)}" style="width:auto;padding:4px 10px;font-size:10px">${t('cancel')}</button>` : ''}
+      </div>`).join('')}</div>` : ''}
     <div class="sec-title">${t('topHolders')}</div>
     <div class="holders" style="max-width:640px">${tk.holders.map((h) => `
       <div class="row">
@@ -484,6 +695,42 @@ async function renderCoin(id) {
       if (e.key === 'Enter') cmBtn.click();
     });
   }
+  // watchlist star
+  $('#coin-star').onclick = () => toggleWatch(tk.id);
+  // alerts
+  viewEl.querySelectorAll('.alert-btn').forEach((b) => {
+    b.onclick = () => setAlert(tk.id, tk.price, Number(b.dataset.pct));
+  });
+  // share
+  $('#coin-share').onclick = () => {
+    const url = location.origin + '/#/coin/' + tk.id;
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.openTelegramLink) {
+      tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(t('shareMsg')(tk.ticker)));
+    } else {
+      window.open('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(t('shareMsg')(tk.ticker)), '_blank');
+    }
+  };
+  // limit orders
+  $('#lo-side').onchange = () => {
+    $('#lo-amt-label').textContent = $('#lo-side').value === 'buy' ? t('amountGrid') : t('amountTokens');
+  };
+  $('#lo-now').onclick = () => { $('#lo-price').value = tk.price; };
+  $('#lo-btn').onclick = async () => {
+    const side = $('#lo-side').value;
+    const amount = Number($('#lo-amt').value);
+    const price = Number($('#lo-price').value);
+    if (!(amount > 0)) return toast(t('enterAmount'));
+    if (!(price > 0)) return toast(t('enterAmount'));
+    await sendTx('ORDER', { token: tk.id, side, amount, price });
+    renderCoin(id);
+  };
+  viewEl.querySelectorAll('.cancel-btn').forEach((b) => {
+    b.onclick = async () => {
+      await sendTx('CANCEL_ORDER', { token: tk.id, id: b.dataset.oid });
+      renderCoin(id);
+    };
+  });
   poll(async () => { if (!typing()) { try { await renderCoin(id); } catch {} } }, 6000);
 }
 
@@ -671,6 +918,25 @@ async function renderWallet() {
   }
 
   const acc = await api('/account/' + w.address);
+  const prices = {};
+  try {
+    for (const tkn of await api('/tokens')) prices[tkn.id] = tkn.price;
+  } catch {}
+  const posEntries = Object.entries(acc.positions || {}).filter(([, p]) => p.amount > 0);
+  const posRows = posEntries.map(([tid, p]) => {
+    const price = prices[tid] || 0;
+    const value = price * p.amount;
+    const cost = p.avg * p.amount;
+    const pnl = value - cost;
+    const pnlPct = cost > 0 ? ((value / cost) - 1) * 100 : 0;
+    const tkn = acc.tokens.find((x) => x.id === tid);
+    return `<div class="row">
+      <span><a href="#/coin/${esc(tid)}" style="color:var(--fg)" class="mono">$${esc(tkn ? tkn.ticker : tid)}</a>
+        <span style="color:var(--dim);font-size:11px"> · ${t('avgEntry')} <span class="mono">${fmtPrice(p.avg)}</span></span></span>
+      <b class="mono ${pnl >= 0 ? '' : 'neg'}" style="text-align:right">
+        ${fmtNum(pnl, 2)} GRID<br><span style="font-size:10px;color:var(--dim)">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}% · ${fmtNum(p.amount, 0)} tk</span></b>
+    </div>`;
+  }).join('');
   viewEl.innerHTML = `
     <div class="narrow">
       <div class="sec-title">${t('walletTitle')}</div>
@@ -684,6 +950,9 @@ async function renderWallet() {
           <span><a href="#/coin/${esc(tk.id)}" style="color:var(--fg)" class="mono">$${esc(tk.ticker || tk.id)}</a></span>
           <b class="mono">${fmtNum(tk.amount)}</b></div>`).join('')}
       </div>
+      ${posRows ? `
+      <div class="sec-title">${t('positions')}</div>
+      <div class="bal-list" id="pnl-list">${posRows}</div>` : ''}
       <div class="panel" style="margin-top:18px">
         <h3>${t('sendTitle')}</h3>
         <div class="field">
@@ -786,7 +1055,13 @@ async function renderProfile(address) {
         <div class="stat"><div class="k">GRID</div><div class="v mono">${fmtNum(acc.grid, 4)}</div></div>
         <div class="stat"><div class="k">${t('coinsN')}</div><div class="v mono">${prof.created.length}</div></div>
         <div class="stat"><div class="k">${t('holders')}</div><div class="v mono">${acc.tokens.length}</div></div>
+        ${prof.stats ? `<div class="stat"><div class="k">${t('pnl')} · realized</div><div class="v mono ${prof.stats.realized >= 0 ? '' : 'neg'}">${fmtNum(prof.stats.realized, 2)}</div></div>` : ''}
       </div>
+      ${(prof.achievements || []).length ? `
+      <div class="sec-title">${t('achievements')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        ${prof.achievements.map((k) => `<span class="badge">🏅 ${esc(t('ach_' + k))}</span>`).join('')}
+      </div>` : ''}
       ${prof.created.length ? `
       <div class="sec-title">${t('createdCoins')}</div>
       <div class="cells">${prof.created.map((tk) => `
@@ -819,6 +1094,80 @@ function base64ToHex(b64) {
   return [...bin].map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
 }
 
+// ---------------------------------------------------------------- explorer
+async function renderExplorer(query) {
+  const blocks = await api('/blocks?limit=20');
+  let detail = '';
+  if (query) {
+    const q = query.trim();
+    if (/^\d+$/.test(q)) {
+      const b = await api('/block/' + q).catch(() => null);
+      detail = b ? blockDetailHtml(b) : `<div class="empty">${t('notFound')}</div>`;
+    } else if (/^grid1[0-9a-f]{40}$/.test(q)) {
+      const p = await api('/profile/' + q).catch(() => null);
+      detail = p ? `<div class="empty" style="text-align:left">
+        <a href="#/profile/${esc(q)}" style="color:var(--fg)">${esc(p.name || q)}</a> → #/profile</div>` : `<div class="empty">${t('notFound')}</div>`;
+    } else if (/^([0-9a-f]{64})$/.test(q)) {
+      const tx = await api('/tx/' + q).catch(() => null);
+      detail = tx ? `<div class="panel"><h3>${esc(tx.type || 'TX')} · ${t('block')} ${tx.block ?? '—'}</h3>
+        <div class="addr-box" style="margin:0"><div class="k">HASH</div><span class="mono">${esc(q)}</span></div>
+        <pre style="font-size:11px;white-space:pre-wrap;word-break:break-all;margin-top:10px;color:var(--dim)">${esc(JSON.stringify(tx.params || tx.summary || {}, null, 2))}</pre></div>` : `<div class="empty">${t('notFound')}</div>`;
+    } else {
+      const ticker = q.replace(/^\$/, '').toUpperCase();
+      const tk = await api('/tokens/' + encodeURIComponent(ticker)).catch(() => null);
+      detail = tk ? `<div class="empty" style="text-align:left"><a href="#/coin/${esc(tk.id)}" style="color:var(--fg)">$${esc(tk.ticker)}</a> — ${esc(tk.name)} · ${fmtPrice(tk.price)} GRID</div>` : `<div class="empty">${t('notFound')}</div>`;
+    }
+  }
+  viewEl.innerHTML = `
+    <div class="sec-title">${t('explorer')}</div>
+    <div class="searchbar">
+      <input id="ex-q" placeholder="${esc(t('searchPh'))}" value="${esc(query || '')}">
+      <button class="btn" id="ex-btn" style="width:auto;padding:10px 18px">${t('search')}</button>
+    </div>
+    <div id="ex-result" style="margin:14px 0">${detail}</div>
+    <div class="sec-title">${t('block')}s</div>
+    <div class="feed">${blocks.map((b) => `
+      <div class="row ex-block" data-h="${b.height}" style="cursor:pointer">
+        <span class="s mono">#${b.height}</span>
+        <span class="m mono" style="color:var(--faint)">${b.hash.slice(0, 18)}…</span>
+        <span class="m">${b.txs} ${t('txsN')} · ${ago(b.time)}</span>
+      </div>`).join('')}</div>`;
+  const go = () => { const v = $('#ex-q').value.trim(); location.hash = '#/explorer' + (v ? '/' + encodeURIComponent(v) : ''); };
+  $('#ex-btn').onclick = go;
+  $('#ex-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  viewEl.querySelectorAll('.ex-block').forEach((r) => {
+    r.onclick = () => { location.hash = '#/explorer/' + r.dataset.h; };
+  });
+}
+
+function blockDetailHtml(b) {
+  return `<div class="panel">
+    <h3>${t('block')} #${b.height}</h3>
+    <div class="addr-box" style="margin-bottom:10px"><div class="k">HASH</div><span class="mono">${esc(b.hash)}</span>
+      <div class="k" style="margin-top:8px">STATE ROOT</div><span class="mono">${esc(b.stateRoot)}</span></div>
+    <div class="feed">${(b.txs || []).map((tx) => {
+      const summary = describeTxLocal(tx);
+      return `<div class="row"><span class="s">${esc(summary)}</span><span class="m mono">${esc((tx.from || '').slice(0, 10))}…</span></div>`;
+    }).join('') || `<div class="row"><span class="s">—</span></div>`}</div>
+  </div>`;
+}
+
+function describeTxLocal(tx) {
+  const p = tx.params || {};
+  switch (tx.type) {
+    case 'TRANSFER': return `transfer ${p.amount} GRID → ${String(p.to).slice(0, 12)}…`;
+    case 'CREATE_TOKEN': return `created $${String(p.ticker || '').toUpperCase()}`;
+    case 'PROFILE': return `name → ${p.name}`;
+    case 'COMMENT': return `💬 ${String(p.text || '').slice(0, 50)}`;
+    case 'BUY': return `buy ${p.amount} GRID of $${p.token}`;
+    case 'SELL': return `sell ${p.amount} $${p.token}`;
+    case 'ORDER': return `limit ${p.side} ${p.amount} $${p.token} @ ${p.price}`;
+    case 'CANCEL_ORDER': return `cancel order`;
+    case 'TOKEN_TRANSFER': return `sent ${p.amount} $${p.token}`;
+    default: return tx.type;
+  }
+}
+
 function applyLang() {
   $('#lang-btn').textContent = LANG.toUpperCase();
   $('#footnote').textContent = t('footer');
@@ -846,10 +1195,18 @@ function applyLang() {
   const tick = async () => {
     try {
       const s = await api('/stats');
-      $('#height-badge').innerHTML = `${t('block')} <b>${s.height}</b>`;
+      $('#height-badge').innerHTML = `${t('block')} <b>${s.height}</b> <span class="live-dot"></span>`;
     } catch {}
   };
+  updateMuteIcon();
+  $('#mute-btn').onclick = () => {
+    MUTED = !MUTED;
+    localStorage.setItem('gridchain_muted', MUTED ? '1' : '0');
+    updateMuteIcon();
+    if (!MUTED) beep(880, 0.06);
+  };
+  initStream();
   tick();
-  setInterval(tick, 4000);
+  setInterval(tick, 15000);
   route();
 })();

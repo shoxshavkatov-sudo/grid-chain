@@ -1,39 +1,50 @@
-// GRID Chain node: mempool, block production loop, disk persistence.
+// GRID Chain node: mempool, block production loop, persistence (file or Postgres).
 import fs from 'node:fs';
 import path from 'node:path';
 import { Chain, blockPayload, txPayload } from './chain.js';
 import { randomKeypair, signMsg, verifySig } from './util.js';
+import { fileStore, postgresStore } from './store.js';
 
 export const BLOCK_INTERVAL_MS = 4000;
 
 export class GridNode {
   constructor(dataDir) {
-    this.dataDir = dataDir;
     this.mempool = [];
-    fs.mkdirSync(dataDir, { recursive: true });
-    this.validator = loadOrCreate(path.join(dataDir, 'validator.json'), () => {
+    this.onBlockHooks = [];
+    this.store = process.env.DATABASE_URL
+      ? postgresStore(process.env.DATABASE_URL)
+      : fileStore(dataDir || './data');
+    fs.mkdirSync(dataDir || './data', { recursive: true });
+    this.validator = loadOrCreate(path.join(dataDir || './data', 'validator.json'), () => {
       const kp = randomKeypair();
       return { secret: kp.secret, public: kp.public };
     });
-    this.faucet = loadOrCreate(path.join(dataDir, 'faucet.json'), () => {
+    this.faucet = loadOrCreate(path.join(dataDir || './data', 'faucet.json'), () => {
       const kp = randomKeypair();
       return { secret: kp.secret, public: kp.public, address: kp.address };
     });
+  }
 
-    const chainFile = path.join(dataDir, 'chain.json');
-    if (fs.existsSync(chainFile)) {
-      const raw = JSON.parse(fs.readFileSync(chainFile, 'utf8'));
+  onBlock(fn) { this.onBlockHooks.push(fn); }
+
+  async ready() {
+    const raw = await this.store.load().catch((e) => {
+      console.error('[node] store load failed, starting fresh:', e.message);
+      return null;
+    });
+    if (raw && raw.blocks && raw.blocks.length) {
       this.chain = new Chain();
       this.chain.blocks = raw.blocks;
       this.chain.recentTxs = raw.recentTxs || [];
       this.chain.state = replayChain(raw.blocks, this.validator.public, raw.faucetAddress);
-      console.log(`[node] loaded chain: ${this.chain.blocks.length} blocks, height ${this.chain.height()}`);
+      console.log(`[node] loaded chain (${this.store.mode}): ${this.chain.blocks.length} blocks, height ${this.chain.height()}`);
     } else {
       this.chain = Chain.genesis(this.faucet.address);
       this.chain.makeBlock([], this.validator); // genesis block seals the faucet allocation
       console.log('[node] created new genesis chain');
-      this.persist();
+      await this.persist();
     }
+    return this;
   }
 
   start() {
@@ -43,11 +54,14 @@ export class GridNode {
 
   tryBlock() {
     if (this.mempool.length === 0) return;
-    this.chain.makeBlock(this.mempool, this.validator);
+    const block = this.chain.makeBlock(this.mempool, this.validator);
     // Clear the whole mempool: applied txs are sealed, dropped ones must be
     // re-submitted by clients with a fresh nonce. Simple and safe for v0.1.
     this.mempool = [];
     this.persist();
+    for (const fn of this.onBlockHooks) {
+      try { fn(block, this.chain); } catch (e) { console.error('[node] onBlock hook failed:', e); }
+    }
   }
 
   // Pre-validate against a cloned state so clients get immediate feedback.
@@ -78,17 +92,14 @@ export class GridNode {
     return tx;
   }
 
-  persist() {
-    const file = path.join(this.dataDir, 'chain.json');
-    const tmp = file + '.tmp';
+  async persist() {
     const payload = {
       validatorPub: this.validator.public,
       faucetAddress: this.faucet.address,
       blocks: this.chain.blocks,
       recentTxs: this.chain.recentTxs,
     };
-    fs.writeFileSync(tmp, JSON.stringify(payload));
-    fs.renameSync(tmp, file);
+    await this.store.save(payload).catch((e) => console.error('[node] persist failed:', e.message));
   }
 }
 
