@@ -1,16 +1,119 @@
 /* GRID Chain launchpad frontend. Zero dependencies. */
 'use strict';
 
+// ---------------------------------------------------------------- i18n
+const I18N = {
+  en: {
+    tabCoins: 'COINS', tabTrade: 'TRADE', tabCreate: 'CREATE', tabWallet: 'WALLET',
+    block: 'Block', txs: 'Transactions', coinsN: 'Coins', accounts: 'Accounts', volume: 'Volume',
+    latestCells: 'Latest cells', liveFeed: 'Live on-chain feed',
+    noCoins: 'no coins yet — be the first cell on the grid', createFirst: 'create a coin',
+    waitingTx: 'waiting for the first transaction…',
+    price: 'Price', marketCap: 'Market cap', liquidity: 'Liquidity', holders: 'Holders',
+    trades: 'Trades', yourBag: 'Your bag', progress: 'Progress', curve: 'curve',
+    graduationAt: 'graduation at 10,000 GRID', topHolders: 'Top holders', noHolders: 'no holders yet',
+    market: 'Market', buy: 'BUY', sell: 'SELL', amountGrid: 'amount, GRID', amountTokens: 'amount, tokens',
+    notEnoughChart: 'not enough trades yet',
+    launchCoin: 'Launch a coin', ticker: 'ticker (2–8, A–Z / 0–9)', name: 'name', desc: 'description',
+    imageUrl: 'image url (optional)', createBtn: 'CREATE COIN — 100 GRID FEE',
+    needWallet: 'you need a wallet first', createOne: 'create one',
+    feeNote: 'fee is burned on-chain · supply 1,000,000,000 fixed · trading starts instantly on the bonding curve',
+    yourBalance: 'your balance',
+    walletTitle: 'Wallet', keysNote: 'keys live only in your browser (localStorage). the node never stores your secret.',
+    createWallet: 'CREATE NEW WALLET', importSecret: 'IMPORT SECRET KEY',
+    noWebcrypto: 'this browser has no WebCrypto — open in Telegram or a modern browser',
+    address: 'ADDRESS', getTestGrid: 'GET TEST GRID', showSecret: 'SHOW SECRET',
+    faucetNote: 'faucet: 5,000 GRID once per hour', neverShare: 'never share this — anyone with it owns the wallet',
+    profile: 'Profile', profileName: 'display name (on-chain)', saveName: 'SET NAME',
+    unnamed: 'unnamed', createdCoins: 'Created coins', activity: 'Activity', noActivity: 'no activity yet',
+    copy: 'copy', copied: 'copied',
+    queued: 'queued — waiting for a block…', confirmed: '✓ confirmed', stillPending: 'still pending… refresh in a moment',
+    enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
+    notEnoughGrid: 'not enough GRID — use the faucet', createdLive: (t) => `✓ $${t} is live`,
+    walletFirst: 'create a wallet first', imported: 'wallet imported', importFailed: 'import failed (bad secret or unsupported browser)',
+    footer: 'GRID Chain testnet — PoA v0.1. Coins here are testnet points with no value. Every trade is a signed transaction sealed in a block. DYOR.',
+  },
+  ru: {
+    tabCoins: 'МОНЕТЫ', tabTrade: 'ТОРГИ', tabCreate: 'СОЗДАТЬ', tabWallet: 'КОШЕЛЁК',
+    block: 'Блок', txs: 'Транзакции', coinsN: 'Монеты', accounts: 'Аккаунты', volume: 'Объём',
+    latestCells: 'Новые ячейки', liveFeed: 'Живая лента цепи',
+    noCoins: 'монет пока нет — стань первой ячейкой сетки', createFirst: 'создать монету',
+    waitingTx: 'ждём первую транзакцию…',
+    price: 'Цена', marketCap: 'Капитализация', liquidity: 'Ликвидность', holders: 'Холдеры',
+    trades: 'Сделки', yourBag: 'В портфеле', progress: 'Прогресс', curve: 'кривая',
+    graduationAt: 'градация на 10,000 GRID', topHolders: 'Топ холдеров', noHolders: 'холдеров пока нет',
+    market: 'Рынок', buy: 'КУПИТЬ', sell: 'ПРОДАТЬ', amountGrid: 'сумма, GRID', amountTokens: 'количество, монет',
+    notEnoughChart: 'сделок пока мало',
+    launchCoin: 'Запустить монету', ticker: 'тикер (2–8, A–Z / 0–9)', name: 'название', desc: 'описание',
+    imageUrl: 'ссылка на картинку (не обязательно)', createBtn: 'СОЗДАТЬ МОНЕТУ — ФИ 100 GRID',
+    needWallet: 'сначала нужен кошелёк', createOne: 'создать',
+    feeNote: 'фи сжигается на цепи · саплай 1,000,000,000 · торговля стартует сразу на bonding curve',
+    yourBalance: 'ваш баланс',
+    walletTitle: 'Кошелёк', keysNote: 'ключи живут только в вашем браузере. нода никогда не видит ваш секрет.',
+    createWallet: 'СОЗДАТЬ КОШЕЛЁК', importSecret: 'ИМПОРТ СЕКРЕТНОГО КЛЮЧА',
+    noWebcrypto: 'в браузере нет WebCrypto — откройте в Telegram или современном браузере',
+    address: 'АДРЕС', getTestGrid: 'ПОЛУЧИТЬ TEST GRID', showSecret: 'ПОКАЗАТЬ КЛЮЧ',
+    faucetNote: 'фосет: 5,000 GRID раз в час', neverShare: 'никому не показывайте — у кого ключ, тот владелец',
+    profile: 'Профиль', profileName: 'имя (записывается на цепь)', saveName: 'СОХРАНИТЬ ИМЯ',
+    unnamed: 'без имени', createdCoins: 'Созданные монеты', activity: 'Активность', noActivity: 'активности пока нет',
+    copy: 'копировать', copied: 'скопировано',
+    queued: 'в очереди — ждём блок…', confirmed: '✓ подтверждено', stillPending: 'ещё в пути… обновите через момент',
+    enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
+    notEnoughGrid: 'не хватает GRID — используйте фосет', createdLive: (t) => `✓ $${t} в эфире`,
+    walletFirst: 'сначала создайте кошелёк', imported: 'кошелёк импортирован', importFailed: 'импорт не удался (плохой ключ или браузер)',
+    footer: 'GRID Chain — тестнет PoA v0.1. Монеты здесь — тестовые очки без стоимости. Каждая сделка — подписанная транзакция в блоке. DYOR.',
+  },
+  uz: {
+    tabCoins: 'TANGALAR', tabTrade: 'SAVDO', tabCreate: 'YARATISH', tabWallet: 'HAMYON',
+    block: 'Blok', txs: 'Tranzaksiyalar', coinsN: 'Tangalar', accounts: 'Akkauntlar', volume: 'Hajm',
+    latestCells: 'Yangi kataklar', liveFeed: 'Zanjirdan jonli lentа',
+    noCoins: 'hali tanga yo‘q — birinchi katak bo‘l', createFirst: 'tanga yaratish',
+    waitingTx: 'birinchi tranzaksiyani kutamiz…',
+    price: 'Narx', marketCap: 'Bozor qiymati', liquidity: 'Likvidlik', holders: 'Egalar',
+    trades: 'Bitimlar', yourBag: 'Portfelingiz', progress: 'Progress', curve: 'egri chiziq',
+    graduationAt: 'gradatsiya 10,000 GRID', topHolders: 'Top egalar', noHolders: 'hali egalar yo‘q',
+    market: 'Bozor', buy: 'SOTIB OLISH', sell: 'SOTISH', amountGrid: 'summa, GRID', amountTokens: 'miqdor, tanga',
+    notEnoughChart: 'bitimlar hali kam',
+    launchCoin: 'Tanga ishga tushirish', ticker: 'ticker (2–8, A–Z / 0–9)', name: 'nomi', desc: 'tavsif',
+    imageUrl: 'rasm havolasi (ixtiyoriy)', createBtn: 'TANGA YARATISH — 100 GRID TO‘LOV',
+    needWallet: 'avval hamyon kerak', createOne: 'yaratish',
+    feeNote: 'to‘lov zanjirda kuydiriladi · supply 1,000,000,000 · savdo darhol bonding curve’da boshlanadi',
+    yourBalance: 'balansingiz',
+    walletTitle: 'Hamyon', keysNote: 'kalitlar faqat brauzeringizda saqlanadi. tugun siringizni ko‘rmaydi.',
+    createWallet: 'YANGI HAMYON YARATISH', importSecret: 'MAXFIY KALITNI IMPORT QILISH',
+    noWebcrypto: 'brauzerda WebCrypto yo‘q — Telegram yoki zamonaviy brauzerda oching',
+    address: 'MANZIL', getTestGrid: 'TEST GRID OLISH', showSecret: 'KALITNI KO‘RSATISH',
+    faucetNote: 'fontan: soatiga bir marta 5,000 GRID', neverShare: 'hech kimga bermang — kalitga ega bo‘lgan hamyonga ega bo‘ladi',
+    profile: 'Profil', profileName: 'ism (zanjirga yoziladi)', saveName: 'ISMNI SAQLASH',
+    unnamed: 'nomsiz', createdCoins: 'Yaratilgan tangalar', activity: 'Faollik', noActivity: 'hali faollik yo‘q',
+    copy: 'nusxalash', copied: 'nusxalandi',
+    queued: 'navbatda — blokni kutamiz…', confirmed: '✓ tasdiqlandi', stillPending: 'hali yo‘lda… birozdan keyin yangilang',
+    enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
+    notEnoughGrid: 'GRID yetmaydi — fontandan oling', createdLive: (t) => `✓ $${t} efirda`,
+    walletFirst: 'avval hamyon yarating', imported: 'hamyon import qilindi', importFailed: 'import muvaffaqiyatsiz (kalit yoki brauzer yomon)',
+    footer: 'GRID Chain — testnet PoA v0.1. Bu yerdagi tangalar qiymatsiz test ochkolari. Har bir bitim — blokqa muhrlangan imzolangan tranzaksiya. DYOR.',
+  },
+};
+const LANGS = ['en', 'ru', 'uz'];
+let LANG = localStorage.getItem('gridchain_lang');
+if (!LANGS.includes(LANG)) {
+  const code = (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe &&
+    Telegram.WebApp.initDataUnsafe.user && Telegram.WebApp.initDataUnsafe.user.language_code) ||
+    (navigator.language || 'en');
+  LANG = code.startsWith('ru') ? 'ru' : code.startsWith('uz') ? 'uz' : 'en';
+}
+const t = (k) => (I18N[LANG] && I18N[LANG][k] !== undefined ? I18N[LANG][k] : I18N.en[k] ?? k);
+
 // ---------------------------------------------------------------- helpers
 const $ = (s) => document.querySelector(s);
 const viewEl = $('#view');
 
 function toast(msg, ms = 2400) {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  const tEl = $('#toast');
+  tEl.textContent = msg;
+  tEl.classList.add('show');
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.remove('show'), ms);
+  toast._t = setTimeout(() => tEl.classList.remove('show'), ms);
 }
 
 function esc(s) {
@@ -18,7 +121,6 @@ function esc(s) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 }
-
 function fmtNum(n, dp = 2) {
   if (!isFinite(n)) return '—';
   return Number(n).toLocaleString('en-US', { maximumFractionDigits: dp });
@@ -26,15 +128,19 @@ function fmtNum(n, dp = 2) {
 function fmtPrice(p) {
   if (!isFinite(p)) return '—';
   if (p >= 1) return p.toFixed(3);
-  const s = p.toFixed(9).replace(/0+$/, '');
-  return s;
+  return p.toFixed(9).replace(/0+$/, '');
 }
 function short(addr) { return addr ? addr.slice(0, 10) + '…' + addr.slice(-4) : '—'; }
 function ago(ts) {
   const d = Math.max(0, Date.now() - ts) / 1000;
-  if (d < 60) return Math.floor(d) + 's ago';
-  if (d < 3600) return Math.floor(d / 60) + 'm ago';
-  return Math.floor(d / 3600) + 'h ago';
+  if (d < 60) return Math.floor(d) + 's';
+  if (d < 3600) return Math.floor(d / 60) + 'm';
+  return Math.floor(d / 3600) + 'h';
+}
+function copyText(text) {
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(() => toast(t('copied')))
+    .catch(() => toast(text));
 }
 
 // canonical JSON — must match the node exactly (sorted keys, no whitespace)
@@ -55,6 +161,23 @@ async function api(path, opts) {
   return j;
 }
 
+// ---------------------------------------------------------------- theme
+function applyTheme(th) {
+  document.documentElement.dataset.theme = th;
+  localStorage.setItem('gridchain_theme', th);
+  $('#theme-icon').innerHTML = th === 'light'
+    ? '<circle cx="12" cy="12" r="4.5"/><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/>'
+    : '<circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>';
+}
+(function initTheme() {
+  let th = localStorage.getItem('gridchain_theme');
+  if (th !== 'light' && th !== 'dark') {
+    const tgScheme = window.Telegram && Telegram.WebApp && Telegram.WebApp.colorScheme;
+    th = tgScheme ? tgScheme : (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  }
+  applyTheme(th);
+})();
+
 // ---------------------------------------------------------------- wallet
 function loadWallet() {
   try { return JSON.parse(localStorage.getItem('gridchain_wallet')); } catch { return null; }
@@ -62,11 +185,10 @@ function loadWallet() {
 function saveWallet(w) { localStorage.setItem('gridchain_wallet', JSON.stringify(w)); }
 function requireWallet() {
   const w = loadWallet();
-  if (!w) { toast('create a wallet first'); location.hash = '#/wallet'; return null; }
+  if (!w) { toast(t('walletFirst')); location.hash = '#/wallet'; return null; }
   return w;
 }
 
-// Ed25519 signing in the browser (WebCrypto). Raw import first, PKCS#8 DER fallback.
 async function signWith(secretHex, msgBytes) {
   const algo = { name: 'Ed25519' };
   let key;
@@ -87,15 +209,14 @@ async function sendTx(type, params) {
   const tx = { type, from: w.address, nonce: acc.nonce, params, pub: w.public };
   const sig = await signWith(w.secret, utf8(canonical({ type, from: tx.from, nonce: tx.nonce, params })));
   tx.sig = bytesToHex(sig);
-  const res = await api('/tx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tx) });
-  toast('queued — waiting for a block…');
-  // poll until the tx is sealed
+  await api('/tx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tx) });
+  toast(t('queued'));
   for (let i = 0; i < 10; i++) {
     await new Promise((r) => setTimeout(r, 1200));
     const a = await api('/account/' + w.address);
-    if (a.nonce > tx.nonce) { toast('✓ confirmed'); return tx; }
+    if (a.nonce > tx.nonce) { toast(t('confirmed')); return tx; }
   }
-  toast('still pending… refresh in a moment');
+  toast(t('stillPending'));
   return tx;
 }
 
@@ -103,17 +224,17 @@ async function sendTx(type, params) {
 let pollTimer = null;
 function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 function poll(fn, ms = 4000) { stopPoll(); pollTimer = setInterval(fn, ms); }
+function typing() { return document.activeElement && viewEl.contains(document.activeElement); }
 
 function setActiveTab(route) {
-  document.querySelectorAll('.tab').forEach((t) => {
-    t.classList.toggle('active', t.dataset.route === route);
+  document.querySelectorAll('.tab').forEach((el) => {
+    el.classList.toggle('active', el.dataset.route === route);
   });
 }
 
 async function route() {
   stopPoll();
-  const hash = location.hash || '#/';
-  const parts = hash.slice(2).split('/').filter(Boolean); // "" | ["trade"] | ["coin","X"] ...
+  const parts = (location.hash || '#/').slice(2).split('/').filter(Boolean);
   const page = parts[0] || '';
   setActiveTab('/' + page);
   try {
@@ -121,6 +242,7 @@ async function route() {
     if (page === 'trade') return await renderTrade(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'create') return await renderCreate();
     if (page === 'wallet') return await renderWallet();
+    if (page === 'profile') return await renderProfile(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'coin' && parts[1]) return await renderCoin(decodeURIComponent(parts[1]));
     location.hash = '#/';
   } catch (e) {
@@ -141,48 +263,46 @@ window.addEventListener('hashchange', route);
 // ---------------------------------------------------------------- home
 async function renderHome() {
   const [stats, tokens, txs] = await Promise.all([api('/stats'), api('/tokens'), api('/txs?limit=14')]);
-  const refresh = async () => {
-    if (document.activeElement && viewEl.contains(document.activeElement)) return;
-    try { await route(); } catch {}
-  };
-  const cells = tokens.map((t) => `
-    <a class="cell-card" href="#/coin/${esc(t.id)}">
-      ${t.graduated ? '<span class="grad-flag">GRADUATED</span>' : ''}
-      <div class="tick">$${esc(t.ticker)}</div>
-      <div class="nm">${esc(t.name)}</div>
-      <div class="row"><span class="k">price</span><span>${fmtPrice(t.price)} GRID</span></div>
-      <div class="row"><span class="k">vol</span><span>${fmtNum(t.volume)}</span></div>
-      <div class="row"><span class="k">holders</span><span>${t.holders}</span></div>
-      <div class="pbar"><i style="width:${Math.round(t.progress * 100)}%"></i></div>
+  const cells = tokens.map((tk) => `
+    <a class="cell-card" href="#/coin/${esc(tk.id)}">
+      ${tk.graduated ? `<span class="grad-flag">GRADUATED</span>` : ''}
+      <div class="tick mono">$${esc(tk.ticker)}</div>
+      <div class="nm">${esc(tk.name)}</div>
+      <div class="row"><span>${t('price')}</span><b class="mono">${fmtPrice(tk.price)}</b></div>
+      <div class="row"><span>${t('volume')}</span><b class="mono">${fmtNum(tk.volume)}</b></div>
+      <div class="row"><span>${t('holders')}</span><b class="mono">${tk.holders}</b></div>
+      <div class="pbar"><i style="width:${Math.round(tk.progress * 100)}%"></i></div>
     </a>`).join('');
 
   viewEl.innerHTML = `
     <div class="stats">
-      <div class="stat"><div class="k">Block</div><div class="v">${stats.height}</div></div>
-      <div class="stat"><div class="k">Transactions</div><div class="v">${stats.txCount}</div></div>
-      <div class="stat"><div class="k">Coins</div><div class="v">${stats.tokens}</div></div>
-      <div class="stat"><div class="k">Accounts</div><div class="v">${stats.accounts}</div></div>
-      <div class="stat"><div class="k">Volume</div><div class="v">${fmtNum(stats.volume, 0)}</div></div>
+      <div class="stat"><div class="k">${t('block')}</div><div class="v mono">${stats.height}</div></div>
+      <div class="stat"><div class="k">${t('txs')}</div><div class="v mono">${stats.txCount}</div></div>
+      <div class="stat"><div class="k">${t('coinsN')}</div><div class="v mono">${stats.tokens}</div></div>
+      <div class="stat"><div class="k">${t('accounts')}</div><div class="v mono">${stats.accounts}</div></div>
+      <div class="stat"><div class="k">${t('volume')}</div><div class="v mono">${fmtNum(stats.volume, 0)}</div></div>
     </div>
-    <div class="sec-title">// Latest cells</div>
-    ${cells ? `<div class="cells">${cells}</div>` : '<div class="empty">no coins yet — be the first cell on the grid<br><br><a style="color:#fff;border-bottom:1px solid #444" href="#/create">create a coin</a></div>'}
-    <div class="sec-title">// Live on-chain feed</div>
-    <div class="feed">${txs.map((t) => `
-      <div class="row"><span class="s">${esc(t.summary)}</span><span class="m">${ago(t.time)}</span></div>`).join('') || '<div class="row"><span class="s">waiting for the first transaction…</span></div>'}
+    <div class="sec-title">${t('latestCells')}</div>
+    ${cells ? `<div class="cells">${cells}</div>`
+      : `<div class="empty">${t('noCoins')}<br><a style="color:var(--fg);border-bottom:1px solid var(--dim)" href="#/create">${t('createFirst')}</a></div>`}
+    <div class="sec-title">${t('liveFeed')}</div>
+    <div class="feed">${txs.map((tx) => `
+      <div class="row"><span class="s">${esc(tx.summary)}</span><span class="m">${ago(tx.time)}</span></div>`).join('')
+      || `<div class="row"><span class="s">${t('waitingTx')}</span></div>`}
     </div>`;
-  poll(refresh);
+  poll(async () => { if (!typing()) route(); });
 }
 
 // ---------------------------------------------------------------- trade terminal
 async function renderTrade(preselect) {
   const tokens = await api('/tokens');
   if (!tokens.length) {
-    viewEl.innerHTML = '<div class="empty">nothing to trade yet — <a style="color:#fff" href="#/create">create the first coin</a></div>';
+    viewEl.innerHTML = `<div class="empty">${t('noCoins')} — <a style="color:var(--fg)" href="#/create">${t('createFirst')}</a></div>`;
     return;
   }
   const byVol = [...tokens].sort((a, b) => b.volume - a.volume);
-  const id = preselect && tokens.find((t) => t.id === preselect) ? preselect : byVol[0].id;
-  const t = tokens.find((x) => x.id === id);
+  const id = preselect && tokens.find((x) => x.id === preselect) ? preselect : byVol[0].id;
+  const tk = tokens.find((x) => x.id === id);
   const w = loadWallet();
   const acc = w ? await api('/account/' + w.address) : null;
   const held = acc ? (acc.tokens.find((x) => x.id === id) || { amount: 0 }).amount : 0;
@@ -190,42 +310,42 @@ async function renderTrade(preselect) {
   viewEl.innerHTML = `
     <div class="trade-wrap">
       <div class="panel">
-        <h3>MARKET</h3>
-        <div class="feed" id="market-list">${byVol.slice(0, 12).map((x) => `
-          <a class="row" href="#/trade/${esc(x.id)}" style="display:flex;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px">
-            <span style="font-weight:700">$${esc(x.ticker)}</span>
-            <span style="color:var(--dim)">${fmtPrice(x.price)}</span>
-            <span style="color:var(--dim)">v${fmtNum(x.volume, 0)}</span>
+        <h3>${t('market')}</h3>
+        <div class="feed">${byVol.slice(0, 12).map((x) => `
+          <a class="row" href="#/trade/${esc(x.id)}" style="display:flex;justify-content:space-between;gap:10px">
+            <span style="font-weight:700" class="mono">$${esc(x.ticker)}</span>
+            <span style="color:var(--dim)" class="mono">${fmtPrice(x.price)}</span>
+            <span style="color:var(--dim)" class="mono">v${fmtNum(x.volume, 0)}</span>
           </a>`).join('')}</div>
       </div>
       <div>
-        <div class="coin-head"><span class="tick">$${esc(t.ticker)}</span><span class="nm">${esc(t.name)}</span></div>
-        <div class="stats" style="margin:18px 0">
-          <div class="stat"><div class="k">Price</div><div class="v">${fmtPrice(t.price)}</div></div>
-          <div class="stat"><div class="k">Your bag</div><div class="v">${fmtNum(held)}</div></div>
-          <div class="stat"><div class="k">GRID bal</div><div class="v">${fmtNum(acc ? acc.grid : 0)}</div></div>
-          <div class="stat"><div class="k">Progress</div><div class="v">${Math.round(t.progress * 100)}%</div></div>
+        <div class="coin-head"><span class="tick mono">$${esc(tk.ticker)}</span><span class="nm">${esc(tk.name)}</span></div>
+        <div class="stats" style="margin:16px 0;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
+          <div class="stat"><div class="k">${t('price')}</div><div class="v mono">${fmtPrice(tk.price)}</div></div>
+          <div class="stat"><div class="k">${t('yourBag')}</div><div class="v mono">${fmtNum(held)}</div></div>
+          <div class="stat"><div class="k">GRID</div><div class="v mono">${fmtNum(acc ? acc.grid : 0)}</div></div>
+          <div class="stat"><div class="k">${t('progress')}</div><div class="v mono">${Math.round(tk.progress * 100)}%</div></div>
         </div>
         <div class="trade-grid">
           <div class="panel">
-            <h3>BUY</h3>
-            <div class="field"><label>amount, GRID</label><input id="buy-amt" type="number" min="1" placeholder="1000"></div>
+            <h3>${t('buy')}</h3>
+            <div class="field"><label>${t('amountGrid')}</label><input id="buy-amt" type="number" min="1" placeholder="1000"></div>
             <div class="quick">
               <button class="btn ghost" data-q="100">100</button>
               <button class="btn ghost" data-q="1000">1000</button>
               <button class="btn ghost" data-q="10000">10k</button>
             </div>
-            <button class="btn" id="buy-btn" style="margin-top:14px">BUY $${esc(t.ticker)}</button>
+            <button class="btn" id="buy-btn" style="margin-top:14px">${t('buy')} $${esc(tk.ticker)}</button>
           </div>
           <div class="panel">
-            <h3>SELL</h3>
-            <div class="field"><label>amount, tokens</label><input id="sell-amt" type="number" min="0" placeholder="${Math.floor(held) || 0}"></div>
+            <h3>${t('sell')}</h3>
+            <div class="field"><label>${t('amountTokens')}</label><input id="sell-amt" type="number" min="0" placeholder="${Math.floor(held) || 0}"></div>
             <div class="quick">
               <button class="btn ghost" data-sell="0.25">25%</button>
               <button class="btn ghost" data-sell="0.5">50%</button>
               <button class="btn ghost" data-sell="1">100%</button>
             </div>
-            <button class="btn ghost" id="sell-btn" style="margin-top:14px">SELL $${esc(t.ticker)}</button>
+            <button class="btn ghost" id="sell-btn" style="margin-top:14px">${t('sell')} $${esc(tk.ticker)}</button>
           </div>
         </div>
       </div>
@@ -233,83 +353,85 @@ async function renderTrade(preselect) {
 
   $('#buy-btn').onclick = async () => {
     const amt = Number($('#buy-amt').value);
-    if (!(amt > 0)) return toast('enter an amount');
-    await sendTx('BUY', { token: t.id, amount: amt });
+    if (!(amt > 0)) return toast(t('enterAmount'));
+    await sendTx('BUY', { token: tk.id, amount: amt });
     route();
   };
   $('#sell-btn').onclick = async () => {
     const amt = Number($('#sell-amt').value);
-    if (!(amt > 0)) return toast('enter an amount');
-    await sendTx('SELL', { token: t.id, amount: amt });
+    if (!(amt > 0)) return toast(t('enterAmount'));
+    await sendTx('SELL', { token: tk.id, amount: amt });
     route();
   };
-  viewEl.querySelectorAll('[data-q]').forEach((b) => {
-    b.onclick = () => { $('#buy-amt').value = b.dataset.q; };
+  viewEl.querySelectorAll('[data-q]').forEach((b) => { b.onclick = () => { $('#buy-amt').value = b.dataset.q; }; });
+  viewEl.querySelectorAll('[data-sell]').forEach((b) => {
+    b.onclick = () => { $('#sell-amt').value = Math.floor(held * Number(b.dataset.sell) * 100) / 100; };
   });
-    viewEl.querySelectorAll('[data-sell]').forEach((b) => {
-      b.onclick = () => { $('#sell-amt').value = Math.floor(held * Number(b.dataset.sell) * 100) / 100; };
-    });
 }
 
 // ---------------------------------------------------------------- coin page
 async function renderCoin(id) {
-  const t = await api('/tokens/' + encodeURIComponent(id));
+  const tk = await api('/tokens/' + encodeURIComponent(id));
   const w = loadWallet();
   const acc = w ? await api('/account/' + w.address) : null;
-  const held = acc ? (acc.tokens.find((x) => x.id === t.id) || { amount: 0 }).amount : 0;
+  const held = acc ? (acc.tokens.find((x) => x.id === tk.id) || { amount: 0 }).amount : 0;
+  const creator = tk.creatorName ? `${esc(tk.creatorName)}` : short(tk.creator);
 
   viewEl.innerHTML = `
-    <div class="coin-head"><span class="tick">$${esc(t.ticker)}</span><span class="nm">${esc(t.name)} · by ${short(t.creator)}</span></div>
-    ${t.desc ? `<p style="color:var(--dim);font-size:13px;margin-top:8px;max-width:640px">${esc(t.desc)}</p>` : ''}
-    <div class="stats" style="margin:18px 0">
-      <div class="stat"><div class="k">Price</div><div class="v">${fmtPrice(t.price)} GRID</div></div>
-      <div class="stat"><div class="k">Market cap</div><div class="v">${fmtNum(t.marketCap, 0)}</div></div>
-      <div class="stat"><div class="k">Liquidity</div><div class="v">${fmtNum(t.liquidity, 0)}</div></div>
-      <div class="stat"><div class="k">Holders</div><div class="v">${t.holders}</div></div>
-      <div class="stat"><div class="k">Trades</div><div class="v">${t.trades}</div></div>
-      <div class="stat"><div class="k">Your bag</div><div class="v">${fmtNum(held)}</div></div>
+    <div class="coin-head"><span class="tick mono">$${esc(tk.ticker)}</span>
+      <span class="nm">${t('price')} · <a href="#/profile/${esc(tk.creator)}" style="color:var(--fg)">${creator}</a></span></div>
+    ${tk.desc ? `<p style="color:var(--dim);font-size:13px;margin-top:8px;max-width:640px">${esc(tk.desc)}</p>` : ''}
+    <div class="stats" style="margin:16px 0">
+      <div class="stat"><div class="k">${t('price')}</div><div class="v mono">${fmtPrice(tk.price)}</div></div>
+      <div class="stat"><div class="k">${t('marketCap')}</div><div class="v mono">${fmtNum(tk.marketCap, 0)}</div></div>
+      <div class="stat"><div class="k">${t('liquidity')}</div><div class="v mono">${fmtNum(tk.liquidity, 0)}</div></div>
+      <div class="stat"><div class="k">${t('holders')}</div><div class="v mono">${tk.holders.length}</div></div>
+      <div class="stat"><div class="k">${t('trades')}</div><div class="v mono">${tk.trades}</div></div>
+      <div class="stat"><div class="k">${t('yourBag')}</div><div class="v mono">${fmtNum(held)}</div></div>
     </div>
-    <div class="pbar" style="height:8px;max-width:640px;position:relative;background:#161616;border:1px solid var(--line)">
-      <i style="position:absolute;inset:0 auto 0 0;width:${Math.round(t.progress * 100)}%;background:#fff"></i>
-    </div>
-    <div style="display:flex;justify-content:space-between;max-width:640px;font-size:10px;color:var(--dim);margin-top:6px">
-      <span>curve ${Math.round(t.progress * 100)}%</span><span>graduation at 10,000 GRID</span>
+    <div style="max-width:640px">
+      <div class="pbar" style="height:8px;background:var(--line-soft);border-radius:4px;position:relative;overflow:hidden">
+        <i style="position:absolute;inset:0 auto 0 0;width:${Math.round(tk.progress * 100)}%;background:var(--fg)"></i>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);margin-top:6px">
+        <span>${t('curve')} ${Math.round(tk.progress * 100)}%</span><span>${t('graduationAt')}</span>
+      </div>
     </div>
     <div class="chart-box"><canvas id="chart"></canvas></div>
     <div class="trade-grid">
       <div class="panel">
-        <h3>BUY</h3>
-        <div class="field"><label>amount, GRID</label><input id="buy-amt" type="number" min="1" placeholder="1000"></div>
-        <button class="btn" id="buy-btn">BUY</button>
+        <h3>${t('buy')}</h3>
+        <div class="field"><label>${t('amountGrid')}</label><input id="buy-amt" type="number" min="1" placeholder="1000"></div>
+        <button class="btn" id="buy-btn">${t('buy')}</button>
       </div>
       <div class="panel">
-        <h3>SELL</h3>
-        <div class="field"><label>amount, tokens</label><input id="sell-amt" type="number" min="0" placeholder="${Math.floor(held) || 0}"></div>
-        <button class="btn ghost" id="sell-btn">SELL</button>
+        <h3>${t('sell')}</h3>
+        <div class="field"><label>${t('amountTokens')}</label><input id="sell-amt" type="number" min="0" placeholder="${Math.floor(held) || 0}"></div>
+        <button class="btn ghost" id="sell-btn">${t('sell')}</button>
       </div>
     </div>
-    <div class="sec-title">// Top holders</div>
-    <div class="holders" style="max-width:640px">${t.holders.map((h) => `
-      <div class="row"><span class="a">${esc(h.address)}</span><span>${fmtNum(h.amount)}</span></div>`).join('') || '<div class="row"><span class="a">no holders yet</span></div>'}
+    <div class="sec-title">${t('topHolders')}</div>
+    <div class="holders" style="max-width:640px">${tk.holders.map((h) => `
+      <div class="row">
+        <span class="a"><a href="#/profile/${esc(h.address)}" style="color:var(--dim)">${h.name ? esc(h.name) : esc(h.address)}</a></span>
+        <span class="mono">${fmtNum(h.amount)}</span>
+      </div>`).join('') || `<div class="row"><span class="a">${t('noHolders')}</span></div>`}
     </div>`;
 
-  drawChart($('#chart'), t.history);
+  drawChart($('#chart'), tk.history);
   $('#buy-btn').onclick = async () => {
     const amt = Number($('#buy-amt').value);
-    if (!(amt > 0)) return toast('enter an amount');
-    await sendTx('BUY', { token: t.id, amount: amt });
+    if (!(amt > 0)) return toast(t('enterAmount'));
+    await sendTx('BUY', { token: tk.id, amount: amt });
     route();
   };
   $('#sell-btn').onclick = async () => {
     const amt = Number($('#sell-amt').value);
-    if (!(amt > 0)) return toast('enter an amount');
-    await sendTx('SELL', { token: t.id, amount: amt });
+    if (!(amt > 0)) return toast(t('enterAmount'));
+    await sendTx('SELL', { token: tk.id, amount: amt });
     route();
   };
-  poll(async () => {
-    if (document.activeElement && viewEl.contains(document.activeElement)) return;
-    try { await renderCoin(id); } catch {}
-  }, 6000);
+  poll(async () => { if (!typing()) { try { await renderCoin(id); } catch {} } }, 6000);
 }
 
 function drawChart(canvas, history) {
@@ -319,35 +441,47 @@ function drawChart(canvas, history) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, w, h);
+  const css = getComputedStyle(document.documentElement);
+  const fg = css.getPropertyValue('--fg').trim() || '#fff';
+  const dim = css.getPropertyValue('--dim').trim() || '#8a8a8a';
+  const gridC = css.getPropertyValue('--chart-grid').trim() || 'rgba(255,255,255,.06)';
+  const fillTop = css.getPropertyValue('--chart-fill-top').trim() || 'rgba(255,255,255,.2)';
   const pts = history.slice(-120);
   if (pts.length < 2) {
-    ctx.fillStyle = '#8a8a8a'; ctx.font = '12px monospace';
-    ctx.fillText('not enough trades yet', 16, h / 2);
+    ctx.fillStyle = dim; ctx.font = '13px sans-serif';
+    ctx.fillText(t('notEnoughChart'), 16, h / 2);
     return;
   }
   const ps = pts.map((p) => p.p);
   const min = Math.min(...ps), max = Math.max(...ps);
   const pad = (max - min) * 0.15 || min * 0.2 || 1;
   const lo = min - pad, hi = max + pad;
-  const X = (i) => 8 + (i / (pts.length - 1)) * (w - 16);
-  const Y = (v) => 12 + (1 - (v - lo) / (hi - lo)) * (h - 28);
+  const X = (i) => 10 + (i / (pts.length - 1)) * (w - 20);
+  const Y = (v) => 14 + (1 - (v - lo) / (hi - lo)) * (h - 30);
 
-  ctx.strokeStyle = 'rgba(255,255,255,.07)';
+  ctx.strokeStyle = gridC; ctx.lineWidth = 1;
   for (let i = 0; i <= 3; i++) {
-    const y = 12 + (i / 3) * (h - 28);
+    const y = 14 + (i / 3) * (h - 30);
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
   }
+  // smooth curve through midpoints
+  const path = new Path2D();
+  path.moveTo(X(0), Y(ps[0]));
+  for (let i = 1; i < ps.length; i++) {
+    const xm = (X(i - 1) + X(i)) / 2, ym = (Y(ps[i - 1]) + Y(ps[i])) / 2;
+    path.quadraticCurveTo(X(i - 1), Y(ps[i - 1]), xm, ym);
+  }
+  path.lineTo(X(ps.length - 1), Y(ps[ps.length - 1]));
+  const fill = new Path2D(path);
+  fill.lineTo(X(ps.length - 1), h); fill.lineTo(X(0), h); fill.closePath();
   const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(255,255,255,.22)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.beginPath();
-  ctx.moveTo(X(0), Y(ps[0]));
-  ps.forEach((v, i) => ctx.lineTo(X(i), Y(v)));
-  ctx.lineTo(X(ps.length - 1), h); ctx.lineTo(X(0), h); ctx.closePath();
-  ctx.fillStyle = grad; ctx.fill();
-  ctx.beginPath();
-  ps.forEach((v, i) => (i ? ctx.lineTo(X(i), Y(v)) : ctx.moveTo(X(i), Y(v))));
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6; ctx.stroke();
+  grad.addColorStop(0, fillTop); grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad; ctx.fill(fill);
+  ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.stroke(path);
+  const lastX = X(ps.length - 1), lastY = Y(ps[ps.length - 1]);
+  ctx.beginPath(); ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = fg; ctx.fill();
 }
 
 // ---------------------------------------------------------------- create
@@ -355,27 +489,26 @@ async function renderCreate() {
   const w = loadWallet();
   const acc = w ? await api('/account/' + w.address) : null;
   viewEl.innerHTML = `
-    <div class="wallet-box" style="margin:0 auto">
-      <div class="sec-title">// Launch a coin</div>
+    <div class="narrow">
+      <div class="sec-title">${t('launchCoin')}</div>
       <div class="panel">
-        ${!w ? '<p class="note" style="margin-bottom:14px">you need a wallet first — <a href="#/wallet" style="color:#fff">create one</a></p>' : ''}
-        <div class="field"><label>ticker (2–8, A–Z / 0–9)</label><input id="c-tick" maxlength="8" placeholder="MOON"></div>
-        <div class="field"><label>name</label><input id="c-name" maxlength="40" placeholder="Moon Coin"></div>
-        <div class="field"><label>description</label><textarea id="c-desc" maxlength="200" rows="3" placeholder="to the moon and back"></textarea></div>
-        <div class="field"><label>image url (optional)</label><input id="c-img" maxlength="300" placeholder="https://…"></div>
-        <button class="btn" id="c-btn" ${w ? '' : 'disabled'}>CREATE COIN — 100 GRID FEE</button>
-        <p class="note">fee is burned on-chain · supply 1,000,000,000 fixed · trading starts instantly on the bonding curve ·
-        ${acc ? `your balance: ${fmtNum(acc.grid)} GRID` : ''}</p>
+        ${!w ? `<p class="note" style="margin-bottom:14px">${t('needWallet')} — <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></p>` : ''}
+        <div class="field"><label>${t('ticker')}</label><input id="c-tick" class="mono" maxlength="8" placeholder="MOON"></div>
+        <div class="field"><label>${t('name')}</label><input id="c-name" maxlength="40" placeholder="Moon Coin"></div>
+        <div class="field"><label>${t('desc')}</label><textarea id="c-desc" maxlength="200" rows="3" placeholder="to the moon and back"></textarea></div>
+        <div class="field"><label>${t('imageUrl')}</label><input id="c-img" maxlength="300" placeholder="https://…"></div>
+        <button class="btn" id="c-btn" ${w ? '' : 'disabled'}>${t('createBtn')}</button>
+        <p class="note">${t('feeNote')}${acc ? ` · ${t('yourBalance')}: <b class="mono">${fmtNum(acc.grid)}</b> GRID` : ''}</p>
       </div>
     </div>`;
   $('#c-btn').onclick = async () => {
     const ticker = $('#c-tick').value.trim().toUpperCase();
     const name = $('#c-name').value.trim();
-    if (!/^[A-Z0-9]{2,8}$/.test(ticker)) return toast('bad ticker');
-    if (!name) return toast('name required');
-    if (acc && acc.grid < 100) return toast('not enough GRID — use the faucet');
+    if (!/^[A-Z0-9]{2,8}$/.test(ticker)) return toast(t('badTicker'));
+    if (!name) return toast(t('nameRequired'));
+    if (acc && acc.grid < 100) return toast(t('notEnoughGrid'));
     const tx = await sendTx('CREATE_TOKEN', { ticker, name, desc: $('#c-desc').value.trim(), image: $('#c-img').value.trim() });
-    if (tx) { toast('✓ $' + ticker + ' is live'); location.hash = '#/coin/' + ticker; }
+    if (tx) { toast(t('createdLive')(ticker)); location.hash = '#/coin/' + ticker; }
   };
 }
 
@@ -384,76 +517,140 @@ async function renderWallet() {
   const w = loadWallet();
   if (!w) {
     viewEl.innerHTML = `
-      <div class="wallet-box" style="margin:0 auto">
-        <div class="sec-title">// Wallet</div>
+      <div class="narrow">
+        <div class="sec-title">${t('walletTitle')}</div>
         <div class="panel">
-          <p class="note" style="margin-bottom:16px">keys live only in your browser (localStorage). the node never stores your secret.</p>
-          <button class="btn" id="w-new">CREATE NEW WALLET</button>
+          <p class="note" style="margin-bottom:16px">${t('keysNote')}</p>
+          <button class="btn" id="w-new">${t('createWallet')}</button>
           <div style="height:10px"></div>
-          <button class="btn ghost" id="w-import">IMPORT SECRET KEY</button>
+          <button class="btn ghost" id="w-import">${t('importSecret')}</button>
           <p class="note" id="ed-note"></p>
         </div>
       </div>`;
     $('#w-new').onclick = async () => {
       const kp = await api('/wallet/new', { method: 'POST', body: '{}' });
       saveWallet(kp);
-      toast('wallet created');
+      toast(t('confirmed'));
       renderWallet();
     };
     $('#w-import').onclick = async () => {
-      const secret = prompt('paste your 64-char hex secret');
+      const secret = prompt('secret (64 hex chars):');
       if (!secret) return;
       try {
-        // derive address/pub client-side by asking the node for a trial? no —
-        // derive via sign test; instead we verify by importing in WebCrypto
         const key = await crypto.subtle.importKey('raw', hexToBytes(secret.trim()), { name: 'Ed25519' }, true, ['sign']);
         const jwk = await crypto.subtle.exportKey('jwk', key);
-        const pubHex = jwk.x ? base64ToHex(jwk.x) : null;
-        if (!pubHex) throw new Error('bad key');
-        const address = await api('/address-of/' + pubHex);
-        saveWallet({ address: address.address, public: pubHex, secret: secret.trim() });
-        toast('wallet imported');
+        if (!jwk.x) throw new Error('bad key');
+        const pubHex = base64ToHex(jwk.x);
+        const { address } = await api('/address-of/' + pubHex);
+        saveWallet({ address, public: pubHex, secret: secret.trim() });
+        toast(t('imported'));
         renderWallet();
-      } catch { toast('import failed (bad secret or unsupported browser)'); }
+      } catch { toast(t('importFailed')); }
     };
-    $('#ed-note').textContent = (window.crypto && crypto.subtle) ? '' : 'this browser has no WebCrypto — open in Telegram or a modern browser';
+    $('#ed-note').textContent = (window.crypto && crypto.subtle) ? '' : t('noWebcrypto');
     return;
   }
 
   const acc = await api('/account/' + w.address);
   viewEl.innerHTML = `
-    <div class="wallet-box" style="margin:0 auto">
-      <div class="sec-title">// Wallet</div>
-      <div class="addr-box"><div class="k">ADDRESS</div>${esc(w.address)}</div>
+    <div class="narrow">
+      <div class="sec-title">${t('walletTitle')}</div>
+      <div class="addr-box"><div class="k">${t('address')}</div>
+        <span class="mono">${esc(w.address)}</span>
+        <button class="btn ghost" style="width:auto;padding:4px 12px;margin-top:10px;font-size:11px" id="w-copy">${t('copy')}</button>
+      </div>
       <div class="bal-list">
-        <div class="row"><span>GRID</span><span>${fmtNum(acc.grid, 4)}</span></div>
-        ${acc.tokens.map((t) => `<div class="row"><span><a href="#/coin/${esc(t.id)}" style="color:#fff">$${esc(t.ticker || t.id)}</a></span><span>${fmtNum(t.amount)}</span></div>`).join('')}
+        <div class="row"><span>GRID</span><b class="mono">${fmtNum(acc.grid, 4)}</b></div>
+        ${acc.tokens.map((tk) => `<div class="row">
+          <span><a href="#/coin/${esc(tk.id)}" style="color:var(--fg)" class="mono">$${esc(tk.ticker || tk.id)}</a></span>
+          <b class="mono">${fmtNum(tk.amount)}</b></div>`).join('')}
       </div>
       <div class="quick" style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <button class="btn" id="w-faucet">GET TEST GRID</button>
-        <button class="btn ghost" id="w-show">SHOW SECRET</button>
+        <button class="btn" id="w-faucet">${t('getTestGrid')}</button>
+        <button class="btn ghost" id="w-show">${t('showSecret')}</button>
       </div>
-      <p class="note">faucet: 5,000 GRID once per hour · nonce: ${acc.nonce}</p>
+      <p class="note">${t('faucetNote')}</p>
     </div>`;
+  $('#w-copy').onclick = () => copyText(w.address);
   $('#w-faucet').onclick = async () => {
     try {
       await api('/faucet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: w.address }) });
-      toast('faucet queued — waiting for a block…');
+      toast(t('queued'));
       for (let i = 0; i < 10; i++) {
         await new Promise((r) => setTimeout(r, 1200));
         const a = await api('/account/' + w.address);
-        if (a.grid > 0) { toast('✓ ' + fmtNum(a.grid) + ' GRID'); return renderWallet(); }
+        if (a.grid > 0) { toast(t('confirmed')); return renderWallet(); }
       }
-      toast('still pending…');
+      toast(t('stillPending'));
     } catch (e) { toast(e.message); }
   };
   $('#w-show').onclick = () => {
     const p = document.createElement('p');
     p.className = 'note';
-    p.innerHTML = `<span class="secret">${esc(w.secret)}</span><br>never share this — anyone with it owns the wallet`;
+    p.innerHTML = `<span class="secret mono">${esc(w.secret)}</span><br>${t('neverShare')}`;
     p.style.marginTop = '12px';
     $('#w-show').replaceWith(p);
   };
+}
+
+// ---------------------------------------------------------------- profile
+async function renderProfile(address) {
+  const own = loadWallet();
+  const addr = address || (own ? own.address : null);
+  if (!addr) {
+    viewEl.innerHTML = `<div class="narrow"><div class="sec-title">${t('profile')}</div>
+      <div class="empty">${t('needWallet')} — <a href="#/wallet" style="color:var(--fg)">${t('createOne')}</a></div></div>`;
+    return;
+  }
+  const [prof, acc] = await Promise.all([api('/profile/' + addr), api('/account/' + addr)]);
+  const isOwn = own && own.address === addr;
+  const initial = (prof.name || '?').slice(0, 1).toUpperCase();
+
+  viewEl.innerHTML = `
+    <div class="narrow">
+      <div class="sec-title">${t('profile')}</div>
+      <div class="avatar">${esc(prof.name ? initial : 'Ø')}</div>
+      <div class="addr-box" style="margin-bottom:8px">
+        <div class="k">${esc(prof.name || t('unnamed'))} ${isOwn ? '<span class="tag">YOU</span>' : ''}</div>
+        <span class="mono" style="color:var(--dim)">${esc(addr)}</span>
+        <button class="btn ghost" style="width:auto;padding:4px 12px;margin-top:10px;font-size:11px" id="p-copy">${t('copy')}</button>
+      </div>
+      ${isOwn ? `
+      <div class="panel" style="margin-bottom:16px">
+        <div class="field"><label>${t('profileName')}</label>
+          <input id="p-name" maxlength="24" value="${esc(prof.name || '')}" placeholder="${esc(t('unnamed'))}"></div>
+        <button class="btn" id="p-save">${t('saveName')}</button>
+      </div>` : ''}
+      <div class="stats" style="margin:16px 0">
+        <div class="stat"><div class="k">GRID</div><div class="v mono">${fmtNum(acc.grid, 4)}</div></div>
+        <div class="stat"><div class="k">${t('coinsN')}</div><div class="v mono">${prof.created.length}</div></div>
+        <div class="stat"><div class="k">${t('holders')}</div><div class="v mono">${acc.tokens.length}</div></div>
+      </div>
+      ${prof.created.length ? `
+      <div class="sec-title">${t('createdCoins')}</div>
+      <div class="cells">${prof.created.map((tk) => `
+        <a class="cell-card" href="#/coin/${esc(tk.id)}">
+          <div class="tick mono">$${esc(tk.ticker)}</div>
+          <div class="nm">${esc(tk.name)}</div>
+          <div class="row"><span>${t('price')}</span><b class="mono">${fmtPrice(tk.price)}</b></div>
+          <div class="pbar"><i style="width:${Math.round(tk.progress * 100)}%"></i></div>
+        </a>`).join('')}</div>` : ''}
+      <div class="sec-title">${t('activity')}</div>
+      <div class="feed">${prof.activity.map((tx) => `
+        <div class="row"><span class="s">${esc(tx.summary)}</span><span class="m">${ago(tx.time)}</span></div>`).join('')
+        || `<div class="row"><span class="s">${t('noActivity')}</span></div>`}
+      </div>
+    </div>`;
+
+  $('#p-copy').onclick = () => copyText(addr);
+  if (isOwn) {
+    $('#p-save').onclick = async () => {
+      const name = $('#p-name').value.replace(/\s+/g, ' ').trim();
+      if (!name) return toast(t('nameRequired'));
+      await sendTx('PROFILE', { name });
+      renderProfile(addr);
+    };
+  }
 }
 
 function base64ToHex(b64) {
@@ -461,12 +658,34 @@ function base64ToHex(b64) {
   return [...bin].map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
 }
 
+function applyLang() {
+  $('#lang-btn').textContent = LANG.toUpperCase();
+  $('#footnote').textContent = t('footer');
+  document.querySelectorAll('.tab[data-i18n]').forEach((el) => {
+    const label = el.querySelector('span');
+    if (label) label.textContent = t(el.dataset.i18n);
+  });
+  document.documentElement.lang = LANG;
+}
+
 // ---------------------------------------------------------------- boot
 (async function boot() {
+  applyLang();
+  $('#lang-btn').onclick = () => {
+    LANG = LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length];
+    localStorage.setItem('gridchain_lang', LANG);
+    applyLang();
+    route();
+  };
+  $('#theme-btn').onclick = () => {
+    applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+    route(); // redraw charts with new palette
+  };
+
   const tick = async () => {
     try {
       const s = await api('/stats');
-      $('#height-badge').innerHTML = `block <b>${s.height}</b>`;
+      $('#height-badge').innerHTML = `${t('block')} <b>${s.height}</b>`;
     } catch {}
   };
   tick();

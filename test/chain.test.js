@@ -128,3 +128,12 @@ test('graduation flips when reserve target reached', () => {
   c.applyTx(makeTx(alice, c.state, 'BUY', { token: 'MOON', amount: GRADUATION_TARGET + 10 }), { height: 1, time: 2 });
   assert.ok(c.state.tokens.MOON.graduated);
 });
+
+test('profile tx sets an on-chain name', () => {
+  const c = freshChain();
+  c.applyTx(makeTx(alice, c.state, 'PROFILE', { name: '  vibe   coder ' }), { height: 1, time: 1 });
+  assert.equal(c.state.profiles[alice.address].name, 'vibe coder');
+  assert.equal(c.state.accounts[alice.address].nonce, 1);
+  assert.throws(() => c.applyTx(makeTx(alice, c.state, 'PROFILE', { name: '' }), {}), (e) => e.code === 'bad_name');
+  assert.throws(() => c.applyTx(makeTx(alice, c.state, 'PROFILE', { name: 'x'.repeat(25) }), {}), (e) => e.code === 'bad_name');
+});

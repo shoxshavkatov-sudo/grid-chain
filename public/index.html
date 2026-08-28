@@ -18,34 +18,40 @@
     <span class="mini-grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
     GRID&nbsp;CHAIN
   </a>
-  <span class="height-badge" id="height-badge" title="block height">·</span>
+  <div class="nav-right">
+    <span class="height-badge" id="height-badge" title="block height">·</span>
+    <button class="lang-btn" id="lang-btn" title="language">EN</button>
+    <button class="icon-btn" id="theme-btn" title="theme">
+      <svg id="theme-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+    </button>
+    <a class="icon-btn" id="profile-btn" href="#/profile" title="profile">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.3-3.5 4.1-5 7.5-5s6.2 1.5 7.5 5"/></svg>
+    </a>
+  </div>
 </nav>
 
 <main id="view"><div class="loading">loading the grid…</div></main>
 
 <div class="tabbar" id="tabbar">
-  <a class="tab" data-route="/" href="#/">
+  <a class="tab" data-route="/" data-i18n="tabCoins" href="#/">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>
     <span>COINS</span>
   </a>
-  <a class="tab" data-route="/trade" href="#/trade">
+  <a class="tab" data-route="/trade" data-i18n="tabTrade" href="#/trade">
     <svg viewBox="0 0 24 24"><path d="M4 7h13"/><path d="m14 4 3 3-3 3"/><path d="M20 17H7"/><path d="m10 14-3 3 3 3"/></svg>
     <span>TRADE</span>
   </a>
-  <a class="tab" data-route="/create" href="#/create">
+  <a class="tab" data-route="/create" data-i18n="tabCreate" href="#/create">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
     <span>CREATE</span>
   </a>
-  <a class="tab" data-route="/wallet" href="#/wallet">
+  <a class="tab" data-route="/wallet" data-i18n="tabWallet" href="#/wallet">
     <svg viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><path d="M15 12h5v-3.5"/><circle cx="16.2" cy="12" r=".8"/></svg>
     <span>WALLET</span>
   </a>
 </div>
 
-<footer>
-  GRID Chain testnet — PoA v0.1. Coins created here are testnet points with no value.
-  Every trade is a signed transaction sealed in a block. DYOR.
-</footer>
+<footer id="footnote"></footer>
 
 <div id="toast" class="toast"></div>
 

@@ -52,12 +52,14 @@ function readBody(req) {
   });
 }
 
-function tokenSummary(t) {
+function tokenSummary(t, state) {
   const price = t.x / t.y;
   const reserve = t.x - V_GRID;
+  const creatorName = (state.profiles && state.profiles[t.creator] && state.profiles[t.creator].name) || null;
   return {
     id: t.id, ticker: t.ticker, name: t.name, desc: t.desc, image: t.image,
-    creator: t.creator, createdAt: t.createdAt,
+    creator: t.creator, creatorName,
+    createdAt: t.createdAt,
     price, reserve, liquidity: t.x,
     progress: Math.max(0, Math.min(1, reserve / GRADUATION_TARGET)),
     graduated: t.graduated,
@@ -125,7 +127,7 @@ async function route(req, res, url) {
 
   if (p === '/api/tokens') {
     const list = Object.values(chain.state.tokens)
-      .map(tokenSummary)
+      .map((t) => tokenSummary(t, chain.state))
       .sort((a, b) => b.createdAt - a.createdAt);
     return json(res, 200, list);
   }
@@ -135,10 +137,28 @@ async function route(req, res, url) {
     const t = chain.state.tokens[id];
     if (!t) return json(res, 404, { error: 'token not found' });
     const holders = Object.entries(t.holders)
-      .map(([address, amount]) => ({ address, amount }))
+      .map(([address, amount]) => ({
+        address, amount,
+        name: (chain.state.profiles && chain.state.profiles[address] && chain.state.profiles[address].name) || null,
+      }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 20);
-    return json(res, 200, { ...tokenSummary(t), history: t.history, holders });
+    return json(res, 200, { ...tokenSummary(t, chain.state), history: t.history, holders });
+  }
+
+  if (p.startsWith('/api/profile/')) {
+    const addr = p.split('/')[3];
+    const prof = chain.state.profiles && chain.state.profiles[addr];
+    const created = Object.values(chain.state.tokens)
+      .filter((t) => t.creator === addr)
+      .map((t) => tokenSummary(t, chain.state));
+    return json(res, 200, {
+      address: addr,
+      name: prof ? prof.name : null,
+      updated: prof ? prof.updated : null,
+      created,
+      activity: chain.recentTxs.filter((tx) => tx.from === addr).slice(0, 20),
+    });
   }
 
   if (p.startsWith('/api/account/')) {
@@ -192,6 +212,11 @@ async function route(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
+  // browsers probe these automatically; answer with the svg favicon instead of 404s
+  if (url.pathname === '/favicon.ico' || url.pathname === '/apple-touch-icon.png') {
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
+    return fs.createReadStream(path.join(__dirname, 'public', 'favicon.svg')).pipe(res);
+  }
   let filePath = url.pathname === '/' ? '/index.html' : url.pathname;
   filePath = path.normalize(filePath).replace(/^(\.\.[/\\])+/, '');
   const abs = path.join(__dirname, 'public', filePath);
@@ -200,7 +225,8 @@ function serveStatic(req, res, url) {
   }
   fs.readFile(abs, (err, data) => {
     if (err) {
-      // SPA fallback
+      // SPA fallback only for extension-less routes (real assets 404 cleanly)
+      if (path.extname(filePath)) { res.writeHead(404); return res.end('not found'); }
       fs.readFile(path.join(__dirname, 'public', 'index.html'), (e2, index) => {
         if (e2) { res.writeHead(404); return res.end('not found'); }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

@@ -61,7 +61,7 @@ export class Chain {
   constructor() {
     this.blocks = [];
     this.recentTxs = []; // flattened, newest first, capped — API convenience only
-    this.state = { accounts: {}, tokens: {} };
+    this.state = { accounts: {}, tokens: {}, profiles: {} };
   }
 
   static genesis(faucetAddress) {
@@ -131,6 +131,13 @@ export class Chain {
           trades: 0, volume: 0, graduated: false,
           history: [{ t: now, p: V_GRID / TOTAL_SUPPLY }],
         };
+        break;
+      }
+      case 'PROFILE': {
+        const name = String(p.name || '').replace(/\s+/g, ' ').trim();
+        if (!name || name.length > 24) throw new ChainError('bad_name', 'profile name must be 1-24 chars');
+        if (!s.profiles) s.profiles = {};
+        s.profiles[from] = { name, updated: blockMeta ? blockMeta.time : Date.now() };
         break;
       }
       case 'BUY': {
@@ -241,6 +248,7 @@ function describeTx(tx, state) {
   switch (tx.type) {
     case 'TRANSFER': return `→ ${String(p.to).slice(0, 14)}… ${p.amount} GRID`;
     case 'CREATE_TOKEN': return `created $${String(p.ticker).toUpperCase()}`;
+    case 'PROFILE': return `set profile name → ${String(p.name).slice(0, 24)}`;
     case 'BUY': {
       const t = state.tokens[String(p.token || '').toUpperCase()];
       const price = t ? (t.x / t.y).toPrecision(4) : '?';
