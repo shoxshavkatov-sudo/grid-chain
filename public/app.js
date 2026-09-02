@@ -5,6 +5,7 @@
 const I18N = {
   en: {
     tabCoins: 'COINS', tabTrade: 'TRADE', tabCreate: 'CREATE', tabWallet: 'WALLET',
+    tabBuy: 'BUY', tabActivity: 'ACTIVITY',
     block: 'Block', txs: 'Transactions', coinsN: 'Coins', accounts: 'Accounts', volume: 'Volume',
     latestCells: 'Latest cells', liveFeed: 'Live on-chain feed',
     noCoins: 'no coins yet — be the first cell on the grid', createFirst: 'create a coin',
@@ -75,7 +76,7 @@ const I18N = {
     registerOk: '✓ account created', regPrompt: 'or create an account with login & password',
     loginPrompt: 'already have an account? log in', accountWallet: 'account wallet', localWallet: 'local wallet',
     useAccount: 'USE ACCOUNT', useLocal: 'USE LOCAL WALLET', twoWallets: 'you have both a local wallet and a logged-in account — different addresses',
-    obTagline: 'launch coins · trade on-chain', guest: 'continue without an account →',
+    obTagline: 'your crypto, on the GRID network', guest: 'continue without an account →',
     cardStyle: 'card',
     continueTg: 'CONTINUE WITH TELEGRAM', continueGoogle: 'CONTINUE WITH GOOGLE',
     tgOpenNote: 'open this app in Telegram to use one-tap login',
@@ -91,10 +92,11 @@ const I18N = {
     enterAmount: 'enter an amount', badTicker: 'bad ticker', nameRequired: 'name required',
     notEnoughGrid: 'not enough GRID — use the faucet', createdLive: (t) => `✓ $${t} is live`,
     walletFirst: 'create a wallet first', imported: 'wallet imported', importFailed: 'import failed (bad secret or unsupported browser)',
-    footer: 'GRID Chain testnet — PoA v0.1. Coins here are testnet points with no value. Every trade is a signed transaction sealed in a block. DYOR.',
+    footer: 'GRID WALLET — secure crypto wallet on the GRID network. Your keys, your crypto. GRID is a digital asset; prices can change. Never share your secret key.',
   },
   ru: {
     tabCoins: 'МОНЕТЫ', tabTrade: 'ТОРГИ', tabCreate: 'СОЗДАТЬ', tabWallet: 'КОШЕЛЁК',
+    tabBuy: 'КУПИТЬ', tabActivity: 'АКТИВНОСТЬ',
     block: 'Блок', txs: 'Транзакции', coinsN: 'Монеты', accounts: 'Аккаунты', volume: 'Объём',
     latestCells: 'Новые ячейки', liveFeed: 'Живая лента цепи',
     noCoins: 'монет пока нет — стань первой ячейкой сетки', createFirst: 'создать монету',
@@ -166,7 +168,7 @@ const I18N = {
     registerOk: '✓ аккаунт создан', regPrompt: 'или создай аккаунт с логином и паролем',
     loginPrompt: 'уже есть аккаунт? войди', accountWallet: 'аккаунт-кошелёк', localWallet: 'локальный кошелёк',
     useAccount: 'ИСПОЛЬЗОВАТЬ АККАУНТ', useLocal: 'ИСПОЛЬЗОВАТЬ ЛОКАЛЬНЫЙ КОШЕЛЁК', twoWallets: 'у тебя есть и локальный кошелёк, и аккаунт — это разные адреса',
-    obTagline: 'запускай монеты · торгуй на цепи', guest: 'продолжить без аккаунта →',
+    obTagline: 'твоя крипта, в сети GRID', guest: 'продолжить без аккаунта →',
     cardStyle: 'карта',
     continueTg: 'ПРОДОЛЖИТЬ С TELEGRAM', continueGoogle: 'ПРОДОЛЖИТЬ С GOOGLE',
     tgOpenNote: 'открой приложение в Telegram для входа в один тап',
@@ -182,10 +184,11 @@ const I18N = {
     enterAmount: 'введите сумму', badTicker: 'плохой тикер', nameRequired: 'нужно название',
     notEnoughGrid: 'не хватает GRID — используйте фосет', createdLive: (t) => `✓ $${t} в эфире`,
     walletFirst: 'сначала создайте кошелёк', imported: 'кошелёк импортирован', importFailed: 'импорт не удался (плохой ключ или браузер)',
-    footer: 'GRID Chain — тестнет PoA v0.1. Монеты здесь — тестовые очки без стоимости. Каждая сделка — подписанная транзакция в блоке. DYOR.',
+    footer: 'GRID WALLET — безопасный криптокошелёк в сети GRID. твои ключи — твоя крипта. GRID — цифровой актив, курс может меняться. никому не передавай секретный ключ.',
   },
   uz: {
     tabCoins: 'TANGALAR', tabTrade: 'SAVDO', tabCreate: 'YARATISH', tabWallet: 'HAMYON',
+    tabBuy: 'SOTIB OLISH', tabActivity: 'FAOLIYAT',
     block: 'Blok', txs: 'Tranzaksiyalar', coinsN: 'Tangalar', accounts: 'Akkauntlar', volume: 'Hajm',
     latestCells: 'Yangi kataklar', liveFeed: 'Zanjirdan jonli lentа',
     noCoins: 'hali tanga yo‘q — birinchi katak bo‘l', createFirst: 'tanga yaratish',
@@ -257,7 +260,7 @@ const I18N = {
     registerOk: '✓ akkaunt yaratildi', regPrompt: 'yoki login va parol bilan akkaunt yarating',
     loginPrompt: 'akkauntingiz bormi? kiring', accountWallet: 'akkaunt-hamyon', localWallet: 'lokal hamyon',
     useAccount: 'AKKAUNTDAN FOYDALANISH', useLocal: 'LOKAL HAMYONDAN FOYDALANISH', twoWallets: 'ham lokal hamyon, ham akkaunt bor — bular turli manzillar',
-    obTagline: 'tangalarni ishga tushir · zanjirda savdo qil', guest: 'akkauntsiz davom etish →',
+    obTagline: 'kriptongiz, GRID tarmog‘ida', guest: 'akkauntsiz davom etish →',
     cardStyle: 'karta',
     continueTg: 'TELEGRAM BILAN DAVOM ETISH', continueGoogle: 'GOOGLE BILAN DAVOM ETISH',
     tgOpenNote: 'bir tappa kirish uchun ilovani Telegramda oching',
@@ -273,7 +276,7 @@ const I18N = {
     enterAmount: 'summani kiriting', badTicker: 'ticker yomon', nameRequired: 'nom kerak',
     notEnoughGrid: 'GRID yetmaydi — fontandan oling', createdLive: (t) => `✓ $${t} efirda`,
     walletFirst: 'avval hamyon yarating', imported: 'hamyon import qilindi', importFailed: 'import muvaffaqiyatsiz (kalit yoki brauzer yomon)',
-    footer: 'GRID Chain — testnet PoA v0.1. Bu yerdagi tangalar qiymatsiz test ochkolari. Har bir bitim — blokqa muhrlangan imzolangan tranzaksiya. DYOR.',
+    footer: 'GRID WALLET — GRID tarmog‘idagi xavfsiz kripto hamyon. kalitlaringiz — kriptongiz. GRID — raqamli aktiv, narxi o‘zgarishi mumkin. maxfiy kalitni hech kimga bermang.',
   },
 };
 const LANGS = ['en', 'ru', 'uz'];
@@ -591,6 +594,7 @@ async function route() {
   try {
     if (page === 'wallet') return await renderWallet();
     if (page === 'buy') return await renderBuy();
+    if (page === 'activity') return await renderActivity();
     if (page === 'profile') return await renderProfile(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'login') return await renderOnboarding();
     if (page === 'admin') return await renderAdmin(); // hidden route for the owner
@@ -617,7 +621,7 @@ async function renderOnboarding() {
   viewEl.innerHTML = `
     <div class="onboard">
       <div class="ob-logo"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <h1 class="ob-title">GRID&nbsp;CHAIN</h1>
+      <h1 class="ob-title">GRID&nbsp;WALLET</h1>
       <p class="ob-tag">${t('obTagline')}</p>
       <div class="panel ob-panel">
         ${cfg.auth && cfg.auth.telegram ? `<button class="btn" id="ob-tg">✈️ ${t('continueTg')}</button>
@@ -1863,6 +1867,32 @@ function describeTxLocal(tx) {
     case 'APPROVE_DEPOSIT': return `${p.reject ? 'rejected' : 'approved'} deposit`;
     default: return tx.type;
   }
+}
+
+// ---------------------------------------------------------------- activity
+async function renderActivity() {
+  const acct = currentAccount();
+  if (!acct) {
+    viewEl.innerHTML = `<div class="narrow"><div class="sec-title">${t('historyTitle')}</div>
+      <div class="empty">${t('walletToChat')} — <a href="#/login" style="color:var(--fg)">${t('login')}</a></div></div>`;
+    return;
+  }
+  const history = await api('/history/' + acct.address).catch(() => []);
+  const deposits = (await api('/deposits').catch(() => ({ deposits: [] }))).deposits
+    .filter((d) => d.from === acct.address)
+    .map((d) => ({ time: d.time, dir: 'in', summary: `top-up ${fmtNum(d.usdt, 2)} TON → ${fmtNum(d.grid, 0)} GRID` }));
+  const all = [...history, ...deposits].sort((a, b) => b.time - a.time);
+  viewEl.innerHTML = `
+    <div class="narrow">
+      <div class="sec-title">${t('historyTitle')}</div>
+      <div class="feed">${all.map((h) => `
+        <div class="row">
+          <span class="s"><span class="side-tag ${h.dir === 'in' ? 'buy' : 'sell'}">${h.dir === 'in' ? esc(t('in_')) : esc(t('out_'))}</span> ${esc(h.summary)}</span>
+          <span class="m">${ago(h.time)}</span>
+        </div>`).join('') || `<div class="row"><span class="s">${t('noHistory')}</span></div>`}
+      </div>
+    </div>`;
+  poll(async () => { if (!typing()) route(); }, 10000);
 }
 
 // ---------------------------------------------------------------- buy GRID (TON top-up)
