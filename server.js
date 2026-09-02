@@ -24,6 +24,51 @@ const faucetLast = new Map(); // address -> last claim timestamp
 const sseClients = new Set(); // open event-stream connections
 
 // ---------------------------------------------------------------------------
+// TON deposit watcher: polls the public TON center API for incoming transfers
+// to the configured deposit address; any transfer whose comment is a valid
+// grid1… address is auto-credited with GRID at the configured rate.
+const TON_MIN = 0.5;
+const seenTonTx = new Set();
+
+function normTon(a) {
+  return String(a || '').replace(/^UQ/, 'EQ');
+}
+
+async function pollTon() {
+  const cfg = node.chain.state.config || {};
+  const dep = cfg.dep_TON;
+  const rate = Number(cfg.tonRate) || 0;
+  if (!dep || !(rate > 0)) return;
+  let txs;
+  try {
+    const r = await fetch(`https://toncenter.com/api/v2/getTransactions?address=${encodeURIComponent(dep)}&limit=20&archival=true`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(15000),
+    });
+    txs = await r.json();
+    if (!Array.isArray(txs)) return;
+  } catch { return; }
+  for (const tx of txs.reverse()) { // oldest first
+    const msg = tx.in_msg || {};
+    if (normTon(msg.destination) !== normTon(dep)) continue;
+    const hash = String(tx.hash || '');
+    const memo = String(msg.message || '').trim();
+    const tons = (Number(msg.value) || 0) / 1e9;
+    if (!hash || seenTonTx.has(hash) || tons < TON_MIN) continue;
+    seenTonTx.add(hash);
+    if (!/^grid1[0-9a-f]{40}$/.test(memo)) continue; // not a deposit comment
+    try {
+      node.fulfillDeposit(memo, Math.round(tons * 1e4) / 1e4, hash);
+      console.log(`[ton] credited ${tons} TON → ${memo.slice(0, 14)}… (${hash.slice(0, 10)}…)`);
+    } catch (e) {
+      if (e.code !== 'dup') console.warn(`[ton] fulfill failed: ${e.message}`);
+    }
+  }
+}
+setInterval(() => { pollTon().catch(() => {}); }, 45000);
+pollTon().catch(() => {});
+
+// ---------------------------------------------------------------------------
 // Accounts with login/password. The keypair secret is stored AES-256-GCM
 // encrypted with the password; a login session keeps the decrypted secret in
 // RAM only, and signs transactions via the /api/relay endpoint.
@@ -425,6 +470,19 @@ async function route(req, res, url) {
       faucetRemaining: (chain.state.accounts[node.faucet.address] || { grid: 0 }).grid,
       constants: { CREATE_FEE, FAUCET_TOTAL, GRADUATION_TARGET, TOTAL_SUPPLY, V_GRID, TRADE_FEE: 0.01 },
     });
+  }
+
+  if (p.startsWith('/api/history/')) {
+    const addr = p.split('/')[3];
+    const own = (tx) => tx.from === addr || (tx.to && tx.to === addr);
+    const list = chain.recentTxs
+      .filter(own)
+      .slice(0, 30)
+      .map((tx) => ({
+        type: tx.type, summary: tx.summary, time: tx.time,
+        dir: tx.from === addr ? 'out' : 'in',
+      }));
+    return json(res, 200, list);
   }
 
   if (p === '/api/config') {

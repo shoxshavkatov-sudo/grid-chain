@@ -63,6 +63,12 @@ const I18N = {
     settingsTitle: 'Settings', usdtRateLabel: 'GRID price in USDT', tonRateLabel: 'GRID price in TON', save: 'SAVE',    depositsTitle: 'Buy requests', approve: 'APPROVE', reject: 'REJECT',
     noDeposits: 'no requests yet', youAreAdmin: 'you are root admin', notAdmin: 'connect the admin wallet',
     login: 'Login', register: 'Create account', username: 'username', password: 'password',
+    receive: 'RECEIVE', send: 'SEND', historyTitle: 'History',
+    scanToPay: 'scan the QR or copy the address',
+    tonTopup: 'Top up with TON', yourMemo: 'MEMO — your GRID address (required)',
+    autoCredit: 'GRID is credited automatically after TON confirms (~1–2 min)',
+    minTons: 'minimum 0.5 TON', tonNotConfigured: 'TON top-up is not configured yet — the admin needs to set the address and rate',
+    noHistory: 'no operations yet', in_: 'IN', out_: 'OUT',
     loginBtn: 'LOG IN', registerBtn: 'REGISTER', logout: 'LOG OUT',
     authNote: 'account = wallet + password backup. log in from any device',
     loggedInAs: 'account', authFailed: 'wrong username or password', userExists: 'username taken',
@@ -148,6 +154,12 @@ const I18N = {
     depositsTitle: 'Заявки на покупку', approve: 'ОДОБРИТЬ', reject: 'ОТКЛОНИТЬ',
     noDeposits: 'заявок пока нет', youAreAdmin: 'ты root-админ', notAdmin: 'подключи кошелёк админа',
     login: 'Вход', register: 'Регистрация', username: 'логин', password: 'пароль',
+    receive: 'ПОЛУЧИТЬ', send: 'ОТПРАВИТЬ', historyTitle: 'История',
+    scanToPay: 'отсканируй QR или скопируй адрес',
+    tonTopup: 'Пополнение через TON', yourMemo: 'МЕМО — ваш GRID-адрес (обязательно)',
+    autoCredit: 'GRID зачислится автоматически после подтверждения TON (~1–2 мин)',
+    minTons: 'минимум 0.5 TON', tonNotConfigured: 'пополнение TON не настроено — админ должен задать адрес и курс',
+    noHistory: 'операций пока нет', in_: 'ПРИХОД', out_: 'РАСХОД',
     loginBtn: 'ВОЙТИ', registerBtn: 'СОЗДАТЬ АККАУНТ', logout: 'ВЫЙТИ',
     authNote: 'аккаунт = кошелёк + пароль для восстановления. вход с любого устройства',
     loggedInAs: 'аккаунт', authFailed: 'неверный логин или пароль', userExists: 'логин занят',
@@ -233,6 +245,12 @@ const I18N = {
     depositsTitle: 'Sotib olish so‘rovlari', approve: 'TASDIQLASH', reject: 'RAD ETISH',
     noDeposits: 'so‘rovlar yo‘q', youAreAdmin: 'sen root-adminsan', notAdmin: 'admin hamyonini ulang',
     login: 'Kirish', register: 'Ro‘yxatdan o‘tish', username: 'login', password: 'parol',
+    receive: 'OLISH', send: 'YUBORISH', historyTitle: 'Tarix',
+    scanToPay: 'QRni skanerlang yoki manzilni nusxalang',
+    tonTopup: 'TON orqali to‘ldirish', yourMemo: 'MEMO — GRID manzilingiz (majburiy)',
+    autoCredit: 'GRID TON tasdig‘idan keyin avtomatik keladi (~1–2 daqiqa)',
+    minTons: 'kamida 0.5 TON', tonNotConfigured: 'TON to‘ldirish sozlanmagan — admin manzil va kurs kiritishi kerak',
+    noHistory: 'operatsiyalar yo‘q', in_: 'KIRIM', out_: 'CHIQIM',
     loginBtn: 'KIRISH', registerBtn: 'AKKAUNT YARATISH', logout: 'CHIQISH',
     authNote: 'akkaunt = hamyon + parol bilan zaxira. har qurilmadan kirish',
     loggedInAs: 'akkaunt', authFailed: 'login yoki parol xato', userExists: 'login band',
@@ -567,22 +585,16 @@ async function route() {
   if (!currentAccount() && !localStorage.getItem('gridchain_onboarded')) {
     return renderOnboarding();
   }
-  const parts = (location.hash || '#/').slice(2).split('/').filter(Boolean);
-  const page = parts[0] || '';
+  const parts = (location.hash || '#/wallet').slice(2).split('/').filter(Boolean);
+  const page = parts[0] || 'wallet';
   setActiveTab('/' + page);
   try {
-    if (page === '') return await renderHome();
-    if (page === 'trade') return await renderTrade(parts[1] ? decodeURIComponent(parts[1]) : null);
-    if (page === 'create') return await renderCreate();
     if (page === 'wallet') return await renderWallet();
-    if (page === 'profile') return await renderProfile(parts[1] ? decodeURIComponent(parts[1]) : null);
-    if (page === 'explorer') return await renderExplorer(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'buy') return await renderBuy();
-    if (page === 'admin') return await renderAdmin();
-    if (page === 'cards') return await renderCards();
+    if (page === 'profile') return await renderProfile(parts[1] ? decodeURIComponent(parts[1]) : null);
     if (page === 'login') return await renderOnboarding();
-    if (page === 'coin' && parts[1]) return await renderCoin(decodeURIComponent(parts[1]));
-    location.hash = '#/';
+    if (page === 'admin') return await renderAdmin(); // hidden route for the owner
+    location.hash = '#/wallet';
   } catch (e) {
     viewEl.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1567,25 +1579,7 @@ async function renderWallet() {
   }
   const skinCls = nft ? 'skin-nft' : 'skin-' + cardSkin();
   const nftStyle = nft ? `--c1:${nft.c1};--c2:${nft.c2}` : '';
-  const prices = {};
-  try {
-    for (const tkn of await api('/tokens')) prices[tkn.id] = tkn.price;
-  } catch {}
-  const posEntries = Object.entries(acc.positions || {}).filter(([, p]) => p.amount > 0);
-  const posRows = posEntries.map(([tid, p]) => {
-    const price = prices[tid] || 0;
-    const value = price * p.amount;
-    const cost = p.avg * p.amount;
-    const pnl = value - cost;
-    const pnlPct = cost > 0 ? ((value / cost) - 1) * 100 : 0;
-    const tkn = acc.tokens.find((x) => x.id === tid);
-    return `<div class="row">
-      <span><a href="#/coin/${esc(tid)}" style="color:var(--fg)" class="mono">$${esc(tkn ? tkn.ticker : tid)}</a>
-        <span style="color:var(--dim);font-size:11px"> · ${t('avgEntry')} <span class="mono">${fmtPrice(p.avg)}</span></span></span>
-      <b class="mono ${pnl >= 0 ? '' : 'neg'}" style="text-align:right">
-        ${fmtNum(pnl, 2)} GRID<br><span style="font-size:10px;color:var(--dim)">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}% · ${fmtNum(p.amount, 0)} tk</span></b>
-    </div>`;
-  }).join('');
+  const history = await api('/history/' + addr).catch(() => []);
   viewEl.innerHTML = `
     <div class="narrow">
       <div class="pay-card ${skinCls}" style="${nftStyle}">
@@ -1606,30 +1600,30 @@ async function renderWallet() {
           <span class="pc-net"><span class="live-dot"></span>GRID CHAIN</span>
         </div>
       </div>
-      <div class="skin-row">
-        <span class="sk-label">${t('cardStyle')}</span>
-        ${SKINS.map((s) => `<button class="skin-dot ${!nft && cardSkin() === s.id ? 'on' : ''}" data-skin="${s.id}" style="background:${s.css}" title="${s.id}"></button>`).join('')}
-        <a class="btn ghost" href="#/cards" style="width:auto;margin-left:auto;padding:5px 12px;font-size:10px">✦ ${t('cardsTitle')}</a>
+      <div class="quick" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px">
+        <button class="btn" id="w-receive">▽ ${t('receive')}</button>
+        <button class="btn ghost" id="w-goto-send">▲ ${t('send')}</button>
       </div>
-      ${acc.tokens.length ? `
-      <div class="chip-row">
-        ${acc.tokens.map((tk) => `<a class="chip" href="#/coin/${esc(tk.id)}"><b class="mono">$${esc(tk.ticker || tk.id)}</b><span class="mono">${fmtNum(tk.amount, 0)}</span></a>`).join('')}
-      </div>` : ''}
-      ${posRows ? `
-      <div class="sec-title">${t('positions')}</div>
-      <div class="bal-list" id="pnl-list">${posRows}</div>` : ''}
-      <div class="panel" style="margin-top:18px">
+      <div class="panel" id="receive-panel" style="display:none;margin-bottom:14px;text-align:center">
+        <h3>${t('receive')}</h3>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${esc(addr)}" alt="QR"
+             style="border-radius:12px;background:#fff;padding:8px;width:170px;height:170px">
+        <div class="addr-box" style="margin:12px 0 0;text-align:left">
+          <div class="k">${t('address')}</div><span class="mono">${esc(addr)}</span></div>
+        <p class="note">${t('scanToPay')}</p>
+      </div>
+      <div class="panel" style="margin-top:4px" id="send-panel">
         <h3>${t('sendTitle')}</h3>
-        <div class="field">
-          <label>${t('asset')}</label>
-          <select id="s-asset">
-            <option value="GRID" data-max="${acc.grid}">GRID — ${fmtNum(acc.grid, 4)}</option>
-            ${acc.tokens.map((tk) => `<option value="${esc(tk.id)}" data-max="${tk.amount}">$${esc(tk.ticker || tk.id)} — ${fmtNum(tk.amount)}</option>`).join('')}
-          </select>
-        </div>
         <div class="field"><label>${t('recipient')}</label><input id="s-to" placeholder="grid1… / @name"></div>
         <div class="field"><label>${t('amountGrid')}</label><input id="s-amt" type="number" min="0" placeholder="0.0"></div>
         <button class="btn" id="s-btn">${t('sendBtn')}</button>
+      </div>
+      <div class="sec-title">${t('historyTitle')}</div>
+      <div class="feed">${history.map((h) => `
+        <div class="row">
+          <span class="s"><span class="side-tag ${h.dir === 'in' ? 'buy' : 'sell'}">${h.dir === 'in' ? esc(t('in_')) : esc(t('out_'))}</span> ${esc(h.summary)}</span>
+          <span class="m">${ago(h.time)}</span>
+        </div>`).join('') || `<div class="row"><span class="s">${t('noHistory')}</span></div>`}
       </div>
       <div class="quick" style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <button class="btn" id="w-faucet">${t('getTestGrid')}</button>
@@ -1638,9 +1632,16 @@ async function renderWallet() {
       <p class="note">${t('faucetNote')}</p>
     </div>`;
   $('#pc-copy').onclick = () => copyText(addr);
-  viewEl.querySelectorAll('.skin-dot').forEach((b) => {
-    b.onclick = () => setCardSkin(b.dataset.skin);
-  });
+  const rc = $('#w-receive');
+  if (rc) rc.onclick = () => {
+    const p = $('#receive-panel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  };
+  const gs = $('#w-goto-send');
+  if (gs) gs.onclick = () => {
+    const sp = viewEl.querySelector('#send-panel') || viewEl.querySelector('.panel');
+    (sp || viewEl).scrollIntoView({ behavior: 'smooth' });
+  };
 
   async function resolveRecipient(raw) {
     raw = raw.trim();
@@ -1655,18 +1656,13 @@ async function renderWallet() {
   }
 
   $('#s-btn').onclick = async () => {
-    const asset = $('#s-asset').value;
     const amt = Number($('#s-amt').value);
     if (!(amt > 0)) return toast(t('enterAmount'));
     const rawTo = $('#s-to').value;
     if (!rawTo) return toast(t('enterRecipient'));
     const to = await resolveRecipient(rawTo);
     if (!to) return toast(t('badRecipient'));
-    if (asset === 'GRID') {
-      await sendTx('TRANSFER', { to, amount: amt });
-    } else {
-      await sendTx('TOKEN_TRANSFER', { token: asset, to, amount: amt });
-    }
+    await sendTx('TRANSFER', { to, amount: amt });
     toast(t('sent'));
     renderWallet();
   };
@@ -1869,72 +1865,47 @@ function describeTxLocal(tx) {
   }
 }
 
-// ---------------------------------------------------------------- buy GRID
-const CURRENCIES = [
-  { id: 'USDT_TRC20', label: 'USDT · TRC-20' },
-  { id: 'TON', label: 'TON' },
-  { id: 'BTC', label: 'BTC' },
-];
-
+// ---------------------------------------------------------------- buy GRID (TON top-up)
 async function renderBuy() {
-  const [cfg, dep] = await Promise.all([api('/config'), api('/deposits')]);
-  const rate = Number(cfg.config && cfg.config.usdtRate) || 0;
-  const w = loadWallet();
-  const my = acct ? dep.deposits.filter((d) => d.address === acct.address) : [];
+  const cfg = await api('/config');
+  const dep = cfg.config && cfg.config.dep_TON;
+  const rate = Number(cfg.config && cfg.config.tonRate) || 0;
+  const acct = currentAccount();
+  const my = acct
+    ? (await api('/deposits').catch(() => ({ deposits: [] }))).deposits.filter((d) => d.from === acct.address)
+    : [];
 
   viewEl.innerHTML = `
     <div class="narrow">
-      <div class="sec-title">${t('buyTitle')}</div>
-      <div class="panel">
-        ${rate > 0 ? `
-        <div class="field"><label>${t('chooseCurrency')}</label>
-          <select id="b-cur">${CURRENCIES.map((cc) =>
-            `<option value="${cc.id}" ${cfg.config['dep_' + cc.id] ? '' : 'disabled'}>${cc.label}${cfg.config['dep_' + cc.id] ? '' : ' — ' + t('notFound')}</option>`).join('')}</select></div>
-        <div class="field"><label>${t('payAmount')}</label><input id="b-amt" type="number" min="1" placeholder="10"></div>
-        <div class="field"><label>${t('youGet')}</label><input id="b-get" class="mono" disabled value="0 GRID"></div>
-        <button class="btn" id="b-btn">${t('createRequest')}</button>
-        <p class="note">${t('sendExactly')}</p>` : `
-        <div class="empty">${t('rateNotSet')}</div>`}
-      </div>
-      <div id="b-result" style="margin-top:14px"></div>
+      <div class="sec-title">${t('tonTopup')}</div>
+      ${dep && rate > 0 ? `
+      <div class="panel" style="text-align:center">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:10px">1 GRID = <b class="mono">${rate}</b> TON · ${t('minTons')}</div>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${esc(dep)}" alt="QR"
+             style="border-radius:12px;background:#fff;padding:8px;width:170px;height:170px">
+        <div class="addr-box" style="margin:12px 0 10px;text-align:left">
+          <div class="k">TON</div><span class="mono">${esc(dep)}</span>
+          <button class="btn ghost" style="width:auto;padding:4px 12px;margin-top:8px;font-size:11px" id="b-copy-dep">${t('copy')}</button>
+        </div>
+        ${acct ? `
+        <div class="addr-box" style="margin:0 0 6px;text-align:left;border-color:color-mix(in srgb,var(--up) 40%,transparent)">
+          <div class="k" style="color:var(--up)">${t('yourMemo')}</div><span class="mono">${esc(acct.address)}</span>
+          <button class="btn ghost" style="width:auto;padding:4px 12px;margin-top:8px;font-size:11px" id="b-copy-memo">${t('copy')}</button>
+        </div>` : `<div class="empty" style="margin-top:10px">${t('walletToChat')} → <a href="#/login" style="color:var(--fg)">${t('login')}</a></div>`}
+        <p class="note">${t('autoCredit')}</p>
+      </div>` : `<div class="empty">${t('tonNotConfigured')}</div>`}
       ${my.length ? `
-      <div class="sec-title">${t('myRequests')}</div>
+      <div class="sec-title">${t('historyTitle')}</div>
       <div class="feed">${my.map((d) => `
         <div class="row">
-          <span class="s">${fmtNum(d.usdt, 2)} ${d.currency} → <b class="mono">${fmtNum(d.grid, 0)} GRID</b>
-            <span class="tag st-${d.status}">${t(d.status)}</span></span>
+          <span class="s"><span class="side-tag buy">${esc(d.currency)}</span> ${fmtNum(d.usdt, 2)} TON → <b class="mono">${fmtNum(d.grid, 0)} GRID</b></span>
           <span class="m">${ago(d.time)}</span>
         </div>`).join('')}</div>` : ''}
     </div>`;
-
-  if (rate > 0) {
-    const upd = () => {
-      const usdt = Number($('#b-amt').value) || 0;
-      $('#b-get').value = fmtNum(Math.floor(usdt / rate), 0) + ' GRID';
-    };
-    $('#b-amt').addEventListener('input', upd);
-    $('#b-btn').onclick = async () => {
-      const w2 = requireWallet();
-      if (!w2) return;
-      const usdt = Number($('#b-amt').value);
-      if (!(usdt >= 1)) return toast(t('enterAmount'));
-      const cur = $('#b-cur').value;
-      const tx = await sendTx('REQUEST_BUY', { currency: cur, usdtAmount: usdt });
-      if (tx) {
-        const memo = await txMemo(tx);
-        const ccfg = cfg.config;
-        $('#b-result').innerHTML = `
-          <div class="panel">
-            <h3>${t('depositAddress')} · ${cur}</h3>
-            <div class="addr-box" style="margin-bottom:10px"><div class="k">${cur}</div>
-              <span class="mono">${esc(ccfg['dep_' + cur])}</span></div>
-            <div class="addr-box" style="margin-bottom:0"><div class="k">${t('memoLabel')}</div>
-              <span class="mono" style="color:var(--up);font-weight:700">${esc(memo)}</span></div>
-            <p class="note">${t('sendExactly')}</p>
-          </div>`;
-      }
-    };
-  }
+  const cd = $('#b-copy-dep');
+  if (cd) cd.onclick = () => copyText(dep);
+  const cm = $('#b-copy-memo');
+  if (cm && acct) cm.onclick = () => copyText(acct.address);
 }
 
 // memo = first 8 hex chars of the tx hash, computed client-side (SHA-256 of canonical signed tx)

@@ -286,6 +286,24 @@ test('NFT card attrs are deterministic with all rarities possible', () => {
   assert.ok(uniq.size > 900, 'patterns must be near-unique: ' + uniq.size);
 });
 
+test('fulfill_deposit: operator-only auto-credit, idempotent by hash', () => {
+  const c = freshChain();
+  c.applyTx(makeTx(alice, c.state, 'CLAIM_ADMIN', {}), { height: 1, time: 1 });
+  c.applyTx(makeTx(alice, c.state, 'SET_CONFIG', { key: 'tonRate', value: '0.005' }), { height: 1, time: 2 });
+  // non-operator cannot fulfill
+  assert.throws(() => c.applyTx(makeTx(alice, c.state, 'FULFILL_DEPOSIT', { address: bob.address, tons: 1, hash: 'abc' }), {}),
+    (e) => e.code === 'not_operator');
+  c.operatorAddr = bob.address; // pretend bob runs the node
+  c.applyTx(makeTx(bob, c.state, 'FULFILL_DEPOSIT', { address: bob.address, tons: 2, hash: 'tx1' }), { height: 1, time: 3 });
+  assert.equal(c.state.accounts[bob.address].grid, 400); // 2 / 0.005
+  // same hash again → rejected
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'FULFILL_DEPOSIT', { address: bob.address, tons: 2, hash: 'tx1' }), {}),
+    (e) => e.code === 'dup');
+  // below minimum
+  assert.throws(() => c.applyTx(makeTx(bob, c.state, 'FULFILL_DEPOSIT', { address: bob.address, tons: 0.3, hash: 'tx2' }), {}),
+    (e) => e.code === 'bad_amount');
+});
+
 test('cancel order refunds the escrow', () => {
   const c = freshChain();
   c.state.accounts[alice.address].grid = 100000;

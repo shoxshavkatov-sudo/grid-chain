@@ -383,6 +383,31 @@ export class Chain {
         c.sale = null;
         break;
       }
+      case 'FULFILL_DEPOSIT': {
+        // operator-only (the node itself): auto-credit GRID for a confirmed
+        // on-chain TON deposit. Idempotent by the external tx hash.
+        if (from !== this.operatorAddr) throw new ChainError('not_operator', 'operator only');
+        const rate = Number(s.config && s.config.tonRate);
+        if (!(rate > 0)) throw new ChainError('no_rate', 'GRID/TON rate is not set');
+        const address = String(p.address || '');
+        if (!/^grid1[0-9a-f]{40}$/.test(address)) throw new ChainError('bad_to', 'bad grid address');
+        const tons = r4(Number(p.tons));
+        if (!(tons >= 0.5)) throw new ChainError('bad_amount', 'minimum deposit is 0.5 TON');
+        const id = 'TON:' + String(p.hash || '');
+        if (id === 'TON:') throw new ChainError('bad_hash', 'missing tx hash');
+        if (!Array.isArray(s.deposits)) s.deposits = [];
+        if (s.deposits.some((d) => d.id === id)) throw new ChainError('dup', 'deposit already credited');
+        const grid = Math.floor(tons / rate);
+        if (grid < 1) throw new ChainError('bad_amount', 'amount too small for this rate');
+        s.deposits.unshift({
+          id, from: address, currency: 'TON', usdt: tons, grid,
+          memo: id, status: 'approved',
+          time: blockMeta ? blockMeta.time : Date.now(),
+        });
+        if (s.deposits.length > 200) s.deposits.length = 200;
+        Chain.ensureAccount(s, address).grid = r4(Chain.ensureAccount(s, address).grid + grid);
+        break;
+      }
       default:
         throw new ChainError('bad_type', `unknown tx type ${tx.type}`);
     }
@@ -392,7 +417,7 @@ export class Chain {
     if (!sender.pub && tx.pub) sender.pub = tx.pub;
 
     this.recentTxs.unshift({
-      hash: txHash(tx), type: tx.type, from,
+      hash: txHash(tx), type: tx.type, from, to: p.to || null,
       summary: describeTx(tx, this.state),
       block: blockMeta ? blockMeta.height : -1,
       time: blockMeta ? blockMeta.time : Date.now(),
@@ -547,6 +572,7 @@ function describeTx(tx, state) {
     case 'SET_CONFIG': return `set ${p.key}`;
     case 'REQUEST_BUY': return `buy request: ${p.usdtAmount} ${p.currency} → GRID`;
     case 'APPROVE_DEPOSIT': return `${p.reject ? 'rejected' : 'approved'} deposit ${String(p.id).slice(0, 8)}…`;
+    case 'FULFILL_DEPOSIT': return `⚡ auto-credit ${p.tons} TON → GRID`;
     case 'MINT_CARD': return 'minted an NFT card';
     case 'SELL_CARD': return `listed card №${p.id} for ${p.price} GRID`;
     case 'CANCEL_SALE': return `delisted card №${p.id}`;

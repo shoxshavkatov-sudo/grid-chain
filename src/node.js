@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Chain, blockPayload, txPayload } from './chain.js';
-import { randomKeypair, signMsg, verifySig } from './util.js';
+import { randomKeypair, signMsg, verifySig, addressFromPub } from './util.js';
 import { fileStore, postgresStore } from './store.js';
 
 export const BLOCK_INTERVAL_MS = 4000;
@@ -23,6 +23,8 @@ export class GridNode {
       const kp = randomKeypair();
       return { secret: kp.secret, public: kp.public, address: kp.address };
     });
+    // the validator doubles as the on-chain "operator" allowed to auto-credit deposits
+    this.operator = { secret: this.validator.secret, public: this.validator.public, address: addressFromPub(this.validator.public) };
   }
 
   onBlock(fn) { this.onBlockHooks.push(fn); }
@@ -37,9 +39,11 @@ export class GridNode {
       this.chain.blocks = raw.blocks;
       this.chain.recentTxs = raw.recentTxs || [];
       this.chain.state = replayChain(raw.blocks, this.validator.public, raw.faucetAddress);
+      this.chain.operatorAddr = this.operator.address;
       console.log(`[node] loaded chain (${this.store.mode}): ${this.chain.blocks.length} blocks, height ${this.chain.height()}`);
     } else {
       this.chain = Chain.genesis(this.faucet.address);
+      this.chain.operatorAddr = this.operator.address;
       this.chain.makeBlock([], this.validator); // genesis block seals the faucet allocation
       console.log('[node] created new genesis chain');
       await this.persist();
@@ -88,6 +92,21 @@ export class GridNode {
       pub: this.faucet.public,
     };
     tx.sig = signMsg(this.faucet.secret, txPayload(tx));
+    this.submitTx(tx);
+    return tx;
+  }
+
+  // Auto-credit GRID for a confirmed TON deposit (signed by the operator key).
+  fulfillDeposit(address, tons, hash) {
+    const opAcc = this.chain.state.accounts[this.operator.address] || { nonce: 0 };
+    const tx = {
+      type: 'FULFILL_DEPOSIT',
+      from: this.operator.address,
+      nonce: opAcc.nonce,
+      params: { address, tons, hash },
+      pub: this.operator.public,
+    };
+    tx.sig = signMsg(this.operator.secret, txPayload(tx));
     this.submitTx(tx);
     return tx;
   }
